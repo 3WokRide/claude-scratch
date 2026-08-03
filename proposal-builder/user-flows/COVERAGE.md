@@ -10,10 +10,10 @@ Traceability from every capability bullet in `CLAUDE.md`'s Product Spec to the f
 | 4 | Shows hosts that don't have a proposal yet (Dashboard) | `dashboard/dashboard-overview.mermaid` → handoff `host/browse-hosts.mermaid` | |
 | 5 | Table of hosts the user currently has (or has searched) (Hosts) | `host/browse-hosts.mermaid` | |
 | 6 | Filter, export, and search the host table (Hosts) | `host/browse-hosts.mermaid` | |
-| 7 | Search for new hosts via GBP lookup (Hosts) | `host/gbp-search-import.mermaid` | |
-| 8 | Duplicate detection on GBP import, backend-handled (Hosts) | `host/gbp-search-import.mermaid` | |
+| 7 | Search for new hosts via GBP lookup (Hosts) | `host/gbp-search-import.mermaid` | manual Host entry is a first-class action on the search screen, not gated behind a failed GBP search — a business without a GBP listing can still be added |
+| 8 | Duplicate detection on GBP import, backend-handled (Hosts) | `host/gbp-search-import.mermaid` | GBP listing ID is the uniqueness key; a match refreshes the existing Host automatically, no user-facing resolution decision |
 | 9 | Refreshing GBP data, backend-handled (Hosts) | *(none — backend-only, no user-facing screen)* | session decision: refresh runs server-side, not user-initiated, so no flow diagram exists for it |
-| 10 | Host may or may not have a proposal or a service list yet (Hosts) | `host/single-host-view.mermaid` | data-model note, drawn as states |
+| 10 | Host may or may not have a proposal or a service list yet (Hosts) | `host/single-host-view.mermaid` | drawn as a passive empty-state placeholder; opening the view never forces creation of a Proposal or Service |
 | 11 | Single Host View: in-depth detail on host, proposals, services (Hosts) | `host/single-host-view.mermaid` | |
 | 12 | Freeform notes field for user context (Hosts) | `host/single-host-view.mermaid` | |
 | 13 | Access proposals made for this host, opens single proposal view (Hosts) | `host/single-host-view.mermaid` → handoff `proposal/browse-proposals.mermaid` | |
@@ -57,7 +57,7 @@ Traceability from every capability bullet in `CLAUDE.md`'s Product Spec to the f
 
 ## Out of scope / session decisions
 
-- **`auth/` (3 flows) is not in `CLAUDE.md`.** It's a session decision, scoped to email/password only: `sign-up`, `log-in`, `password-reset`. No email verification step, no Google OAuth, no Workspace token flows. Not traceable to the spec above by design — listed here instead of in the matrix.
+- **`auth/` (3 flows) is not in `CLAUDE.md`.** It's a session decision: `sign-up`, `log-in`, `password-reset`, authenticated via Auth0 Universal Login (redirect to Auth0-hosted screens, authorization-code exchange for tokens). Email/password connection only — no social login, no Google OAuth, no Workspace token flows. Not traceable to the spec above by design — listed here instead of in the matrix.
 - **Services open question resolved**: AI pulls from the service catalog when suggesting services per Problem-Solution bundle (spec row 40). Diagrams treat this as settled, not as an open branch.
 - **Known inconsistency to flag**: the spec's output is a Google Slides link and host discovery uses Google Business Profile — both need Google API credentials — but auth is scoped to email/password. Diagrams draw the Google API calls as `System:` nodes with failure branches and do not invent a connect-Google-account flow. If those credentials turn out to be per-user rather than server-side, `auth/` needs a fifth flow (connect Google account).
 

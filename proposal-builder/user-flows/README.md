@@ -21,11 +21,13 @@ user-flows/
 ```
 
 ### auth/ (3) — session decision, not in CLAUDE.md (see COVERAGE.md)
+Authenticated via Auth0 Universal Login: the app redirects to Auth0-hosted screens for credential entry, signup, and password reset, then exchanges the returned authorization code for tokens.
+
 | File | Covers |
 |---|---|
-| `sign-up.mermaid` | register → validation → session |
-| `log-in.mermaid` | credentials → session |
-| `password-reset.mermaid` | forgot → email → reset link → new password |
+| `sign-up.mermaid` | redirect to Auth0 → register (Auth0-hosted) → validation (Auth0-hosted) → callback → token exchange → session |
+| `log-in.mermaid` | redirect to Auth0 → credentials (Auth0-hosted) → callback → token exchange → session |
+| `password-reset.mermaid` | forgot (Auth0-hosted) → email (Auth0-hosted) → reset link (Auth0-hosted) → new password (Auth0-hosted) |
 
 ### dashboard/ (3)
 | File | Covers |
@@ -38,8 +40,8 @@ user-flows/
 | File | Covers |
 |---|---|
 | `browse-hosts.mermaid` | table → filter/search/export |
-| `gbp-search-import.mermaid` | GBP lookup → results → import |
-| `single-host-view.mermaid` | detail → notes save → branch to proposals / service management / new proposal |
+| `gbp-search-import.mermaid` | GBP lookup → results → import, or manual entry (first-class, no GBP required) |
+| `single-host-view.mermaid` | detail → notes save → branch to proposals / service management / new proposal; no Proposal or Service is auto-created |
 
 ### proposal/ (9)
 | File | Covers |

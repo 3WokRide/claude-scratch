@@ -1,6 +1,6 @@
 %% Flow: Log In
-%% Applies: 4 (required field and credential validation)
-%% N/A: 1 (no list or table), 2 (no external API call in this flow), 3 (no AI generation), 5 (no duplicate or conflict scenario), 6 (no destructive action), 7 (no referenced-elsewhere dependency), 8 (short flow, session is being created rather than expiring)
+%% Applies: 2 (Auth0 authorization-code exchange is an external API call), 4 (credential validation happens on the Auth0-hosted login screen)
+%% N/A: 1 (no list or table), 3 (no AI generation), 5 (no duplicate or conflict scenario), 6 (no destructive action), 7 (no referenced-elsewhere dependency), 8 (short flow, session is being created rather than expiring)
 flowchart LR
     classDef startEnd fill:#B3FFCC,stroke:#4CBB77,stroke-width:2px,color:#1A1A1A
     classDef screen fill:#B3D9FF,stroke:#4A90D9,stroke-width:2px,color:#1A1A1A
@@ -8,23 +8,29 @@ flowchart LR
     classDef decision fill:#FFE066,stroke:#E6B800,stroke-width:2px,color:#1A1A1A
     classDef errorNode fill:#FFB3B3,stroke:#E05C5C,stroke-width:2px,stroke-dasharray: 5 5,color:#1A1A1A
 
-    A0(["Start: user opens log-in page"]):::startEnd -->|"navigates to log in"| B["Screen: Enter email and password"]:::screen
-    A1(["Start: from auth/sign-up"]):::startEnd -->|"chooses to log in instead"| B
-    A3(["Start: from auth/password-reset"]):::startEnd -->|"password updated"| B
+    A0(["Start: user opens log-in page"]):::startEnd -->|"navigates to log in"| B0[["System: Redirect to Auth0 Universal Login"]]:::system
+    A1(["Start: from auth/sign-up"]):::startEnd -->|"chooses to log in instead"| B0
+    A3(["Start: from auth/password-reset"]):::startEnd -->|"password updated"| B0
+
+    B0 -->|"browser redirects to Auth0"| B["Screen (Auth0-hosted): Enter email and password"]:::screen
 
     B -->|"clicks forgot password"| End1(["End: continues in auth/password-reset"]):::startEnd
 
-    B -->|"submits credentials"| C{"Decision: Both fields filled?"}:::decision
-    C -->|"No"| E1["Error: Required field missing"]:::errorNode
+    B -->|"submits credentials"| C{"Decision (Auth0-hosted): Credentials valid?"}:::decision
+    C -->|"No, required field missing"| E1["Error (Auth0-hosted): Required field missing"]:::errorNode
     E1 -.->|"tries again"| B
-    C -->|"Yes"| D[["System: Verify credentials"]]:::system
-    D -->|"checks credentials"| F{"Decision: Credentials valid?"}:::decision
-
-    F -->|"No"| E2["Error: Incorrect email or password, message does not reveal which field is wrong"]:::errorNode
-    E2 -->|"logs failed attempt"| G{"Decision: Too many failed attempts?"}:::decision
+    C -->|"No, incorrect email or password"| E2["Error (Auth0-hosted): Incorrect email or password, message does not reveal which field is wrong"]:::errorNode
+    E2 -->|"logs failed attempt"| G{"Decision (Auth0-hosted): Too many failed attempts?"}:::decision
     G -.->|"No, attempts remain, tries again"| B
-    G -->|"Yes, threshold exceeded"| E3["Edge case: Temporary lockout, rate limited"]:::errorNode
+    G -->|"Yes, threshold exceeded"| E3["Edge case (Auth0-hosted): Temporary lockout, rate limited"]:::errorNode
     E3 -.->|"waits and retries later"| B
 
-    F -->|"Yes"| I[["System: Create session"]]:::system
-    I -->|"session created"| End3(["End: continues in dashboard/dashboard-overview"]):::startEnd
+    C -->|"Yes"| D[["System: Auth0 redirects to callback URL with authorization code"]]:::system
+    D -->|"callback received"| H{"Decision: Callback valid?"}:::decision
+    H -->|"No, access denied or state mismatch"| E4["Error: Login callback failed"]:::errorNode
+    E4 -.->|"retries login"| B0
+    H -->|"Yes"| I[["System: Exchange authorization code for tokens"]]:::system
+    I -->|"exchange failed, network or Auth0 outage"| E5["Error: Token exchange failed"]:::errorNode
+    E5 -.->|"retries login"| B0
+    I -->|"tokens received"| J[["System: Create session"]]:::system
+    J -->|"session created"| End3(["End: continues in dashboard/dashboard-overview"]):::startEnd

@@ -1,6 +1,6 @@
 %% Flow: Sign Up
-%% Applies: 4 (required field and password strength validation), 5 (email already registered conflict)
-%% N/A: 1 (no list or table in this flow), 2 (no external API call in this flow), 3 (no AI generation involved), 6 (no destructive action), 7 (no referenced-elsewhere dependency), 8 (short flow, session is created immediately, no expiry risk)
+%% Applies: 2 (Auth0 account creation and authorization-code exchange are external API calls), 4 (required field and password strength validation happen on the Auth0-hosted signup screen), 5 (email already registered conflict, surfaced by Auth0)
+%% N/A: 1 (no list or table in this flow), 3 (no AI generation involved), 6 (no destructive action), 7 (no referenced-elsewhere dependency), 8 (short flow, session is created immediately, no expiry risk)
 flowchart LR
     classDef startEnd fill:#B3FFCC,stroke:#4CBB77,stroke-width:2px,color:#1A1A1A
     classDef screen fill:#B3D9FF,stroke:#4A90D9,stroke-width:2px,color:#1A1A1A
@@ -8,19 +8,29 @@ flowchart LR
     classDef decision fill:#FFE066,stroke:#E6B800,stroke-width:2px,color:#1A1A1A
     classDef errorNode fill:#FFB3B3,stroke:#E05C5C,stroke-width:2px,stroke-dasharray: 5 5,color:#1A1A1A
 
-    A(["Start: user opens sign-up page"]):::startEnd -->|"navigates to sign up"| B["Screen: Enter email and password"]:::screen
-    B -->|"submits form"| C{"Decision: Required fields present?"}:::decision
-    C -->|"Missing"| E1["Error: Required field missing"]:::errorNode
+    A(["Start: user opens sign-up page"]):::startEnd -->|"navigates to sign up"| B0[["System: Redirect to Auth0 Universal Login, signup mode"]]:::system
+    B0 -->|"browser redirects to Auth0"| B["Screen (Auth0-hosted): Enter email and password to create account"]:::screen
+
+    B -->|"submits form"| C{"Decision (Auth0-hosted): Required fields present?"}:::decision
+    C -->|"Missing"| E1["Error (Auth0-hosted): Required field missing"]:::errorNode
     E1 -.->|"tries again"| B
-    C -->|"Present"| D{"Decision: Password meets strength requirements?"}:::decision
-    D -->|"No"| E2["Error: Password fails strength requirements"]:::errorNode
+    C -->|"Present"| D{"Decision (Auth0-hosted): Password meets strength requirements?"}:::decision
+    D -->|"No"| E2["Error (Auth0-hosted): Password fails strength requirements"]:::errorNode
     E2 -.->|"tries again"| B
-    D -->|"Yes"| F{"Decision: Email already registered?"}:::decision
-    F -->|"Yes"| E3["Error: Email already registered"]:::errorNode
+    D -->|"Yes"| F{"Decision (Auth0-hosted): Email already registered?"}:::decision
+    F -->|"Yes"| E3["Error (Auth0-hosted): Email already registered"]:::errorNode
     E3 -->|"chooses to log in instead"| End1(["End: continues in auth/log-in"]):::startEnd
     E3 -->|"chooses to reset password instead"| End2(["End: continues in auth/password-reset"]):::startEnd
-    F -->|"No"| G[["System: Create account"]]:::system
+    F -->|"No"| G[["System: Auth0 creates user account"]]:::system
     G -->|"service unavailable"| E5["Error: Signup temporarily unavailable"]:::errorNode
-    E5 -.->|"tries again later"| B
-    G -->|"account created"| H[["System: Create session"]]:::system
-    H -->|"session created"| End3(["End: continues in dashboard/dashboard-overview"]):::startEnd
+    E5 -.->|"tries again later"| B0
+    G -->|"account created"| K[["System: Auth0 redirects to callback URL with authorization code"]]:::system
+    K -->|"callback received"| H{"Decision: Callback valid?"}:::decision
+    H -->|"No, access denied or state mismatch"| E6["Error: Signup callback failed"]:::errorNode
+    E6 -.->|"retries signup"| B0
+    H -->|"Yes"| I[["System: Exchange authorization code for tokens"]]:::system
+    I -->|"exchange failed, network or Auth0 outage"| E7["Error: Token exchange failed"]:::errorNode
+    E7 -.->|"retries signup"| B0
+    I -->|"tokens received"| L[["System: Provision app user profile"]]:::system
+    L -->|"profile provisioned"| M[["System: Create session"]]:::system
+    M -->|"session created"| End3(["End: continues in dashboard/dashboard-overview"]):::startEnd

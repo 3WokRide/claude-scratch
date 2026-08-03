@@ -28,11 +28,11 @@ flowchart TD
     D -->|"navigates away with unsaved edits"| E5["Edge case: unsaved notes when navigating away"]:::errorNode
     E5 -->|"prompts to save or discard"| C
 
-    C -->|"has no Proposals yet"| H1["Edge case: Host has no Proposals yet"]:::errorNode
-    H1 -->|"prompts to create one"| Z2(["End: continues in proposal/create-proposal-discovery"]):::startEnd
+    C -->|"has no Proposals yet"| H1["Edge case: no Proposals yet, empty placeholder shown"]:::errorNode
+    H1 -->|"stays until user creates one"| C
     C -->|"opens an existing Proposal"| Z3(["End: continues in proposal/browse-proposals"]):::startEnd
     C -->|"creates a new Proposal for this Host"| Z4(["End: continues in proposal/create-proposal-discovery, GBP search step skipped"]):::startEnd
 
-    C -->|"has no Services yet"| H2["Edge case: Host has no Services yet"]:::errorNode
-    H2 -->|"prompts to add Services"| Z5(["End: continues in services/manage-host-services"]):::startEnd
-    C -->|"opens service management"| Z5
+    C -->|"has no Services yet"| H2["Edge case: no Services yet, empty placeholder shown"]:::errorNode
+    H2 -->|"stays until user adds one"| C
+    C -->|"opens service management"| Z5(["End: continues in services/manage-host-services"]):::startEnd
