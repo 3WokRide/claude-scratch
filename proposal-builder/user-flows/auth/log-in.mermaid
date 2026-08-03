@@ -1,0 +1,30 @@
+%% Flow: Log In
+%% Applies: 4 (required field and credential validation)
+%% N/A: 1 (no list or table), 2 (no external API call in this flow), 3 (no AI generation), 5 (no duplicate or conflict scenario), 6 (no destructive action), 7 (no referenced-elsewhere dependency), 8 (short flow, session is being created rather than expiring)
+flowchart LR
+    classDef startEnd fill:#B3FFCC,stroke:#4CBB77,stroke-width:2px,color:#1A1A1A
+    classDef screen fill:#B3D9FF,stroke:#4A90D9,stroke-width:2px,color:#1A1A1A
+    classDef system fill:#E0E0E0,stroke:#9E9E9E,stroke-width:2px,color:#1A1A1A
+    classDef decision fill:#FFE066,stroke:#E6B800,stroke-width:2px,color:#1A1A1A
+    classDef errorNode fill:#FFB3B3,stroke:#E05C5C,stroke-width:2px,stroke-dasharray: 5 5,color:#1A1A1A
+
+    A0(["Start: user opens log-in page"]):::startEnd -->|"navigates to log in"| B["Screen: Enter email and password"]:::screen
+    A1(["Start: from auth/sign-up"]):::startEnd -->|"chooses to log in instead"| B
+    A3(["Start: from auth/password-reset"]):::startEnd -->|"password updated"| B
+
+    B -->|"clicks forgot password"| End1(["End: continues in auth/password-reset"]):::startEnd
+
+    B -->|"submits credentials"| C{"Decision: Both fields filled?"}:::decision
+    C -->|"No"| E1["Error: Required field missing"]:::errorNode
+    E1 -.->|"tries again"| B
+    C -->|"Yes"| D[["System: Verify credentials"]]:::system
+    D -->|"checks credentials"| F{"Decision: Credentials valid?"}:::decision
+
+    F -->|"No"| E2["Error: Incorrect email or password, message does not reveal which field is wrong"]:::errorNode
+    E2 -->|"logs failed attempt"| G{"Decision: Too many failed attempts?"}:::decision
+    G -.->|"No, attempts remain, tries again"| B
+    G -->|"Yes, threshold exceeded"| E3["Edge case: Temporary lockout, rate limited"]:::errorNode
+    E3 -.->|"waits and retries later"| B
+
+    F -->|"Yes"| I[["System: Create session"]]:::system
+    I -->|"session created"| End3(["End: continues in dashboard/dashboard-overview"]):::startEnd

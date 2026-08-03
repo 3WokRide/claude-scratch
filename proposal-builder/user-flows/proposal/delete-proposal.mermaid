@@ -1,0 +1,42 @@
+%% Flow: Delete Proposal
+%% Applies: 6 (destructive action confirm), 7 (deleting the Host's only Proposal, Host resurfaces in dashboard)
+%% N/A: 1 (not a list/table view), 2 (Slides deck removal is a local Drive choice, not a call this flow retries), 3 (no AI generation in this flow), 4 (no form input, only a confirmation), 5 (no naming or merge conflict in this flow), 8 (short flow, no session-expiry risk)
+flowchart TD
+    classDef startEnd fill:#B3FFCC,stroke:#4CBB77,stroke-width:2px,color:#1A1A1A
+    classDef screen fill:#B3D9FF,stroke:#4A90D9,stroke-width:2px,color:#1A1A1A
+    classDef system fill:#E0E0E0,stroke:#9E9E9E,stroke-width:2px,color:#1A1A1A
+    classDef decision fill:#FFE066,stroke:#E6B800,stroke-width:2px,color:#1A1A1A
+    classDef errorNode fill:#FFB3B3,stroke:#E05C5C,stroke-width:2px,stroke-dasharray: 5 5,color:#1A1A1A
+
+    A1(["Start: from proposal/browse-proposals"]):::startEnd -->|"clicks delete on a Proposal row"| B{"Decision: Draft or completed Proposal?"}:::decision
+    A2(["Start: from host/single-host-view"]):::startEnd -->|"clicks delete on a Proposal"| B
+    A3(["Start: from single Proposal view"]):::startEnd -->|"clicks delete Proposal"| B
+
+    B -->|"Draft"| C1{"Decision: is this Draft open in another tab?"}:::decision
+    C1 -->|"not open elsewhere"| D1["Screen: confirm delete, Draft data will be lost"]:::screen
+    C1 -->|"open in another tab"| E1["Edge case: Draft is currently open in another tab"]:::errorNode
+    E1 -->|"warns before deleting"| D1
+
+    B -->|"completed Proposal"| D2["Screen: confirm delete, Slides deck exists and may have been shared"]:::screen
+    D2 -->|"chooses deck handling"| F{"Decision: leave the Slides deck in Drive or delete it too?"}:::decision
+    F -->|"leave in Drive"| D3["Screen: confirm delete, deck stays in Drive"]:::screen
+    F -->|"delete it too"| D4["Screen: confirm delete, deck will also be deleted"]:::screen
+
+    D1 -->|"reviews confirmation"| G{"Decision: confirm or cancel?"}:::decision
+    D3 -->|"reviews confirmation"| G
+    D4 -->|"reviews confirmation"| G
+
+    G -->|"cancel"| Z1(["End: returns to proposal/browse-proposals"]):::startEnd
+    G -->|"confirm"| H[["System: Delete Proposal"]]:::system
+
+    H -->|"delete fails"| E2["Error: delete failed"]:::errorNode
+    E2 -.->|"retry"| H
+
+    H -->|"delete succeeds"| I{"Decision: was this the Host's only Proposal?"}:::decision
+    I -->|"Host had other Proposals"| K["Screen: Proposal deleted, undo available"]:::screen
+    I -->|"Host's only Proposal"| J["Edge case: deleting the Host's only Proposal"]:::errorNode
+    J -->|"Host reverts to no Proposal, resurfaces in dashboard hosts-without-a-proposal list"| K
+
+    K -->|"clicks undo within the window"| L[["System: restore Proposal"]]:::system
+    L -->|"restore succeeds"| Z2(["End: returns to proposal/browse-proposals"]):::startEnd
+    K -.->|"undo window expires"| Z3(["End: Proposal permanently deleted"]):::startEnd

@@ -1,0 +1,52 @@
+%% Flow: Revise Proposal
+%% Applies: 2 (Slides export failure), 3 (regeneration handoff can fail, covered fully in regenerate-proposal-section), 5 (concurrent revision by another session), 8 (long revise-and-export flow, session expiry)
+%% N/A: 1 (not a list/table view), 4 (form validation lives in create-proposal-customize), 6 (no deletion in this flow), 7 (GBP data refresh is backend-handled, no user-facing branch)
+flowchart TD
+    classDef startEnd fill:#B3FFCC,stroke:#4CBB77,stroke-width:2px,color:#1A1A1A
+    classDef screen fill:#B3D9FF,stroke:#4A90D9,stroke-width:2px,color:#1A1A1A
+    classDef system fill:#E0E0E0,stroke:#9E9E9E,stroke-width:2px,color:#1A1A1A
+    classDef decision fill:#FFE066,stroke:#E6B800,stroke-width:2px,color:#1A1A1A
+    classDef errorNode fill:#FFB3B3,stroke:#E05C5C,stroke-width:2px,stroke-dasharray: 5 5,color:#1A1A1A
+
+    A(["Start: from proposal/browse-proposals"]):::startEnd -->|"opens a completed Proposal for revision"| B[["System: load Proposal"]]:::system
+    B -->|"load fails"| E1["Error: Proposal failed to load"]:::errorNode
+    E1 -.->|"retry"| B
+    B -->|"session expired"| E2["Edge case: session expired"]:::errorNode
+    E2 -->|"redirects to log in"| Z1(["End: continues in auth/log-in"]):::startEnd
+    B -->|"another session is revising this Proposal"| E3["Edge case: concurrent revision by another session"]:::errorNode
+    E3 -->|"view only, or wait and retry"| B
+
+    B -->|"load succeeds"| C["Screen: Revise Proposal overview"]:::screen
+
+    C -->|"chooses what to change"| F{"Decision: what does the user want to change?"}:::decision
+    F -->|"customization inputs: tone, pricing, template, color, notes, Services"| Z2(["End: continues in proposal/create-proposal-customize"]):::startEnd
+    F -->|"a single generated Section"| Z3(["End: continues in proposal/regenerate-proposal-section"]):::startEnd
+    F -->|"edits content inline in the preview"| G["Screen: edit content inline in preview"]:::screen
+    G -->|"navigates away with unsaved edits"| E4["Edge case: unsaved edits on exit"]:::errorNode
+    E4 -->|"prompts to save or discard"| G
+    G -->|"done editing"| H["Screen: ready to re-export"]:::screen
+    Z2 -.->|"returns with updated inputs"| H
+    Z3 -.->|"returns with updated Section"| H
+
+    H -->|"proceeds to re-export"| I{"Decision: was this Proposal already shared with the client?"}:::decision
+    I -->|"not shared yet"| K{"Decision: overwrite existing Slides deck or create a new version?"}:::decision
+    I -->|"already shared"| J["Edge case: Proposal already shared with client, warns before overwrite"]:::errorNode
+    J -->|"acknowledges warning"| K
+
+    K -->|"overwrite existing deck"| K1["Screen: overwrite changes the link already shared with the client"]:::screen
+    K -->|"create new version"| K2["Screen: new version leaves the old link intact"]:::screen
+
+    K1 -->|"confirms overwrite"| L{"Decision: source Slides deck still present in Drive?"}:::decision
+    K2 -->|"confirms new version"| M[["System: Export to Google Slides"]]:::system
+
+    L -->|"deck present"| M
+    L -->|"deck deleted or moved in Drive"| E5["Edge case: source Slides deck was deleted or moved in Drive"]:::errorNode
+    E5 -->|"creates a new deck instead"| M
+
+    M -->|"export succeeds"| N["Screen: updated Slides link, Proposal saved on Host"]:::screen
+    M -->|"export fails"| E6["Error: export failed"]:::errorNode
+    E6 -.->|"retry"| M
+    M -->|"quota exceeded"| E7["Edge case: Google API quota exceeded"]:::errorNode
+    E7 -.->|"retry later"| M
+
+    N -->|"done"| Z4(["End: revision saved on Host"]):::startEnd

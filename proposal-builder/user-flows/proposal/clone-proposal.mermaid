@@ -1,0 +1,43 @@
+%% Flow: Clone Proposal
+%% Applies: 4 (naming the clone is a form input), 5 (naming conflict with an existing Proposal name), 7 (source references a deleted Preset or a Service no longer on the target Host)
+%% N/A: 1 (not a list/table view), 2 (GBP lookup here reuses host/gbp-search-import, no new external call to model), 3 (no AI generation in this flow), 6 (no destructive action, cloning only adds), 8 (short flow, no session-expiry risk)
+flowchart LR
+    classDef startEnd fill:#B3FFCC,stroke:#4CBB77,stroke-width:2px,color:#1A1A1A
+    classDef screen fill:#B3D9FF,stroke:#4A90D9,stroke-width:2px,color:#1A1A1A
+    classDef system fill:#E0E0E0,stroke:#9E9E9E,stroke-width:2px,color:#1A1A1A
+    classDef decision fill:#FFE066,stroke:#E6B800,stroke-width:2px,color:#1A1A1A
+    classDef errorNode fill:#FFB3B3,stroke:#E05C5C,stroke-width:2px,stroke-dasharray: 5 5,color:#1A1A1A
+
+    A1(["Start: from proposal/browse-proposals"]):::startEnd -->|"clicks clone on a Proposal row"| B{"Decision: keep the same Host or pick a different one?"}:::decision
+    A2(["Start: from single Proposal view"]):::startEnd -->|"clicks clone Proposal"| B
+
+    B -->|"same Host"| E["Screen: name the clone"]:::screen
+    B -->|"different Host"| C{"Decision: choose an existing Host or search GBP?"}:::decision
+    C -->|"existing Host"| D1["Screen: select from existing Hosts"]:::screen
+    C -->|"search GBP"| D2(["End: continues in host/gbp-search-import"]):::startEnd
+    D1 -->|"selects target Host"| E
+
+    E -->|"chooses naming"| F{"Decision: auto-named copy or user-named?"}:::decision
+    F -->|"auto-named"| G[["System: Copy Proposal data"]]:::system
+    F -->|"user-named"| F1["Screen: enter clone name"]:::screen
+    F1 -->|"submits name"| G1{"Decision: name valid and unique?"}:::decision
+    G1 -->|"valid"| G
+    G1 -->|"conflicts with existing Proposal name"| E1["Error: naming conflict with an existing Proposal"]:::errorNode
+    E1 -.->|"edits name"| F1
+
+    G -->|"copy succeeds"| H{"Decision: any references broken by the target Host?"}:::decision
+    G -->|"copy fails"| E2["Error: copy operation failed"]:::errorNode
+    E2 -.->|"retry"| G
+
+    H -->|"no broken references"| Z(["End: continues in proposal/create-proposal-customize, fields pre-filled"]):::startEnd
+
+    H -->|"referenced Preset was deleted"| E3["Edge case: source Preset has since been deleted"]:::errorNode
+    E3 -->|"falls back to manual settings"| Z
+    E3 -->|"picks a replacement Preset"| E3a["Screen: choose replacement Preset"]:::screen
+    E3a -->|"selects replacement"| Z
+
+    H -->|"referenced Service missing from catalog or target Host"| E4["Edge case: Service no longer in catalog or on target Host"]:::errorNode
+    E4 -->|"prompts to remove or replace the Service"| Z
+
+    H -->|"pricing does not apply to target Host"| E5["Edge case: pricing does not apply to the new Host"]:::errorNode
+    E5 -->|"prompts to review pricing"| Z

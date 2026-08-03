@@ -1,0 +1,56 @@
+%% Flow: Manage Host Services
+%% Applies: 1 (no Services yet empty state), 4 (Service form validation), 5 (duplicate Service name), 6 (delete confirmation on every delete), 7 (deleting a Service referenced by a Proposal)
+%% N/A: 2 (no external API call in this flow), 3 (no AI generation in this flow), 8 (short flow, no session-expiry risk)
+flowchart TD
+    classDef startEnd fill:#B3FFCC,stroke:#4CBB77,stroke-width:2px,color:#1A1A1A
+    classDef screen fill:#B3D9FF,stroke:#4A90D9,stroke-width:2px,color:#1A1A1A
+    classDef system fill:#E0E0E0,stroke:#9E9E9E,stroke-width:2px,color:#1A1A1A
+    classDef decision fill:#FFE066,stroke:#E6B800,stroke-width:2px,color:#1A1A1A
+    classDef errorNode fill:#FFB3B3,stroke:#E05C5C,stroke-width:2px,stroke-dasharray: 5 5,color:#1A1A1A
+
+    A1(["Start: from services/services-overview"]):::startEnd -->|"selects a Host"| B[["System: load Host Service list"]]:::system
+    A2(["Start: from host/single-host-view"]):::startEnd -->|"opens service management"| B
+
+    B -->|"Host has no Services yet"| C1["Edge case: no Services yet"]:::errorNode
+    C1 -->|"prompts to add the first Service"| D["Screen: add first Service, or seed from catalog"]:::screen
+    B -->|"Host has Services"| E["Screen: Host Service list"]:::screen
+
+    D -->|"adds manually"| F["Screen: Service form"]:::screen
+    D -->|"seeds from catalog"| G{"Decision: catalog empty?"}:::decision
+
+    E -->|"selects add"| F
+    E -->|"selects a Service to edit"| F
+    E -->|"selects seed from catalog"| G
+    E -->|"selects a Service to delete"| H{"Decision: confirm delete?"}:::decision
+
+    G -->|"catalog has entries"| I["Screen: select from Service catalog"]:::screen
+    G -->|"catalog is empty"| C2["Edge case: catalog is empty when seeding"]:::errorNode
+    C2 -.->|"returns to add manually"| F
+    C2 -->|"leaves to populate the Service catalog first"| Z_CATALOG(["End: continues in customization/service-catalog"]):::startEnd
+    I -->|"selects entries to add"| J[["System: add selected as Services"]]:::system
+    J -->|"added"| E
+
+    F -->|"submits name, description, pricing"| K{"Decision: form valid?"}:::decision
+    K -->|"invalid"| E1["Error: validation failure"]:::errorNode
+    E1 -.->|"corrects and resubmits"| F
+    K -->|"valid"| L{"Decision: duplicate Service name for this Host?"}:::decision
+    L -->|"duplicate"| E2["Error: duplicate Service name for this Host"]:::errorNode
+    E2 -.->|"renames and resubmits"| F
+    L -->|"unique"| M[["System: save Service"]]:::system
+    M -->|"save succeeds"| E
+    M -->|"save fails"| E3["Error: save failure"]:::errorNode
+    E3 -.->|"retry save"| F
+
+    H -->|"cancels"| E
+    H -->|"confirms delete"| N[["System: check Proposal references"]]:::system
+    N -->|"not referenced"| O[["System: delete Service"]]:::system
+    N -->|"referenced by an active or completed Proposal"| C3["Edge case: Service referenced by a Proposal"]:::errorNode
+    C3 -->|"shows where it is used"| P{"Decision: block or unlink?"}:::decision
+    P -->|"blocks the delete"| E4["Error: delete blocked, Service in use"]:::errorNode
+    E4 -->|"returns to list"| E
+    P -->|"unlinks and keeps the Proposal"| Q[["System: unlink Service from Proposal, then delete"]]:::system
+    Q -->|"deleted"| E
+
+    O -->|"delete succeeds"| E
+    O -->|"delete fails"| E5["Error: save failure"]:::errorNode
+    E5 -.->|"retry delete"| E

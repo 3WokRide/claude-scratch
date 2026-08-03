@@ -1,0 +1,38 @@
+%% Flow: Single Host View
+%% Applies: 1 (no Proposals yet / no Services yet empty states), 4 (notes field validation), 5 (notes save conflict), 8 (unsaved notes lost on navigation is a session-continuity risk)
+%% N/A: 2 (GBP calls belong to gbp-search-import; GBP refresh is backend-handled, no user-facing flow), 3 (no AI generation happens in this view), 6 (no delete action in this view), 7 (referenced-elsewhere handled in manage-host-services and delete-proposal, not here)
+flowchart TD
+    classDef startEnd fill:#B3FFCC,stroke:#4CBB77,stroke-width:2px,color:#1A1A1A
+    classDef screen fill:#B3D9FF,stroke:#4A90D9,stroke-width:2px,color:#1A1A1A
+    classDef system fill:#E0E0E0,stroke:#9E9E9E,stroke-width:2px,color:#1A1A1A
+    classDef decision fill:#FFE066,stroke:#E6B800,stroke-width:2px,color:#1A1A1A
+    classDef errorNode fill:#FFB3B3,stroke:#E05C5C,stroke-width:2px,stroke-dasharray: 5 5,color:#1A1A1A
+
+    A1(["Start: from host/browse-hosts"]):::startEnd -->|"selects a Host row"| B[["System: load Host"]]:::system
+    A2(["Start: from host/gbp-search-import"]):::startEnd -->|"import complete"| B
+
+    B -->|"load succeeds"| C["Screen: Single Host View"]:::screen
+    B -->|"load fails"| E1["Error: Host fails to load"]:::errorNode
+    E1 -.->|"retry"| B
+    B -->|"Host was deleted in another session"| E2["Edge case: Host was deleted in another session"]:::errorNode
+    E2 -->|"returns to table"| Z1(["End: continues in host/browse-hosts"]):::startEnd
+
+    C -->|"views notes field"| D["Screen: freeform notes field"]:::screen
+    D -->|"edits and saves notes"| F{"Decision: notes valid?"}:::decision
+    F -->|"valid"| G[["System: save notes"]]:::system
+    F -->|"invalid, e.g. exceeds length limit"| E3["Error: notes validation failure"]:::errorNode
+    E3 -.->|"edits and resaves"| D
+    G -->|"save succeeds"| C
+    G -->|"conflicting edit saved elsewhere"| E4["Edge case: notes save conflict"]:::errorNode
+    E4 -->|"reviews and merges before resaving"| D
+    D -->|"navigates away with unsaved edits"| E5["Edge case: unsaved notes when navigating away"]:::errorNode
+    E5 -->|"prompts to save or discard"| C
+
+    C -->|"has no Proposals yet"| H1["Edge case: Host has no Proposals yet"]:::errorNode
+    H1 -->|"prompts to create one"| Z2(["End: continues in proposal/create-proposal-discovery"]):::startEnd
+    C -->|"opens an existing Proposal"| Z3(["End: continues in proposal/browse-proposals"]):::startEnd
+    C -->|"creates a new Proposal for this Host"| Z4(["End: continues in proposal/create-proposal-discovery, GBP search step skipped"]):::startEnd
+
+    C -->|"has no Services yet"| H2["Edge case: Host has no Services yet"]:::errorNode
+    H2 -->|"prompts to add Services"| Z5(["End: continues in services/manage-host-services"]):::startEnd
+    C -->|"opens service management"| Z5

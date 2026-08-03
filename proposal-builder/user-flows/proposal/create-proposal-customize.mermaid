@@ -1,0 +1,75 @@
+%% Flow: Create Proposal - Customize
+%% Applies: 1 (Service catalog is empty when adding a custom Service), 4 (pricing, notes, and case study field validation), 7 (a selected Preset was deleted since selection), 8 (session expiry mid-step)
+%% N/A: 2 (no external API call in this flow), 3 (no AI generation call in this flow), 5 (no duplicate or naming conflict surfaced here), 6 (no destructive action requiring confirmation in this flow)
+flowchart TD
+    classDef startEnd fill:#B3FFCC,stroke:#4CBB77,stroke-width:2px,color:#1A1A1A
+    classDef screen fill:#B3D9FF,stroke:#4A90D9,stroke-width:2px,color:#1A1A1A
+    classDef system fill:#E0E0E0,stroke:#9E9E9E,stroke-width:2px,color:#1A1A1A
+    classDef decision fill:#FFE066,stroke:#E6B800,stroke-width:2px,color:#1A1A1A
+    classDef errorNode fill:#FFB3B3,stroke:#E05C5C,stroke-width:2px,stroke-dasharray: 5 5,color:#1A1A1A
+
+    S1(["Start: from proposal/create-proposal-discovery"]):::startEnd -->|"lands on customize screen"| B["Screen: customize proposal"]:::screen
+    S2(["Start: from proposal/clone-proposal, fields pre-filled"]):::startEnd -->|"lands on customize screen"| B
+    S3(["Start: from proposal/revise-proposal"]):::startEnd -->|"lands on customize screen to edit"| B
+
+    B -->|"sets tone"| T1{"Decision: use a tone Preset?"}:::decision
+    T1 -->|"selects a Preset"| B
+    T1 -->|"enters tone manually"| T3["Screen: manual tone entry"]:::screen
+    T3 -->|"tone saved"| B
+    T1 -->|"no tone Presets exist yet"| ERR_T["Edge case: no tone Preset exists yet"]:::errorNode
+    ERR_T -->|"falls back to manual entry"| T3
+    ERR_T -->|"leaves to create a tone Preset first"| END_PRESETS(["End: continues in customization/manage-presets"]):::startEnd
+
+    B -->|"sets template"| L1{"Decision: use a template Preset?"}:::decision
+    L1 -->|"selects a Preset"| B
+    L1 -->|"chooses layout manually"| L3["Screen: manual template selection"]:::screen
+    L3 -->|"template saved"| B
+    L1 -->|"no template Presets exist yet"| ERR_L["Edge case: no template Preset exists yet"]:::errorNode
+    ERR_L -->|"falls back to manual selection"| L3
+    ERR_L -->|"leaves to create a template Preset first"| END_PRESETS
+
+    B -->|"sets color scheme"| C1{"Decision: use a color scheme Preset?"}:::decision
+    C1 -->|"selects a Preset"| B
+    C1 -->|"picks colors manually"| C3["Screen: manual color scheme entry"]:::screen
+    C3 -->|"color scheme saved"| B
+    C1 -->|"no color scheme Presets exist yet"| ERR_C["Edge case: no color scheme Preset exists yet"]:::errorNode
+    ERR_C -->|"falls back to manual entry"| C3
+    ERR_C -->|"leaves to create a color scheme Preset first"| END_PRESETS
+
+    B -->|"sets pricing per Bundle"| P1["Screen: pricing per Bundle"]:::screen
+    P1 -->|"enters amount and type for each Bundle"| P2{"Decision: pricing valid for every selected Bundle?"}:::decision
+    P2 -->|"pricing valid"| B
+    P2 -->|"pricing missing or invalid"| ERR_P["Error: pricing missing or invalid for a Bundle"]:::errorNode
+    ERR_P -.->|"corrects pricing"| P1
+
+    B -->|"adds notes"| N1["Screen: additional notes"]:::screen
+    N1 -->|"saves notes"| N2{"Decision: notes pass validation?"}:::decision
+    N2 -->|"notes valid"| B
+    N2 -->|"validation fails"| ERR_N["Error: notes fail validation"]:::errorNode
+    ERR_N -.->|"corrects notes"| N1
+
+    B -->|"adds or removes custom Services"| SV1["Screen: custom Services"]:::screen
+    SV1 -->|"adds a Service from the catalog"| SV2{"Decision: does the Service catalog have entries?"}:::decision
+    SV2 -->|"catalog has entries"| SV3[["System: add Service from catalog"]]:::system
+    SV2 -->|"catalog is empty"| ERR_SV["Edge case: Service catalog is empty"]:::errorNode
+    ERR_SV -->|"enters a Service manually"| SV4["Screen: manual Service entry"]:::screen
+    ERR_SV -->|"leaves to populate the Service catalog first"| END_CATALOG(["End: continues in customization/service-catalog"]):::startEnd
+    SV3 -->|"Service added"| B
+    SV4 -->|"Service saved"| B
+    SV1 -->|"removes a Service"| SV5[["System: remove Service"]]:::system
+    SV5 -->|"Service removed"| B
+
+    B -->|"session expires"| ERR_SESS["Edge case: session expires mid-step"]:::errorNode
+    ERR_SESS -->|"redirects to log in"| END_AUTH(["End: continues in auth/log-in"]):::startEnd
+    B -->|"saves as Draft"| END_DRAFT(["End: continues in proposal/save-and-resume-draft"]):::startEnd
+
+    B -->|"clicks continue"| V1{"Decision: any selected Preset deleted since selection?"}:::decision
+    V1 -->|"all selections still valid"| CS1{"Decision: include a case study?"}:::decision
+    V1 -->|"a Preset was deleted since selection"| ERR_PD["Edge case: selected Preset was deleted since selection"]:::errorNode
+    ERR_PD -->|"replaces with another Preset or continues manually"| B
+
+    CS1 -->|"includes a case study"| CS2["Screen: case study information"]:::screen
+    CS1 -->|"skips case study"| END_PREVIEW(["End: continues in proposal/create-proposal-generate-preview"]):::startEnd
+    CS2 -->|"case study saved"| END_PREVIEW
+    CS2 -->|"validation fails"| ERR_CS["Error: case study fields fail validation"]:::errorNode
+    ERR_CS -.->|"corrects case study info"| CS2

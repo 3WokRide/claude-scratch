@@ -1,0 +1,34 @@
+%% Flow: Browse Hosts
+%% Applies: 1 (empty state), 2 (external API failure - export), 5 (no matches is a distinct empty state)
+%% N/A: 3 (no AI generation in this flow), 4 (no form input, only filter/search fields), 6 (no delete action here), 7 (no delete/edit here to reference), 8 (short browsing flow, no session-expiry risk)
+flowchart LR
+    classDef startEnd fill:#B3FFCC,stroke:#4CBB77,stroke-width:2px,color:#1A1A1A
+    classDef screen fill:#B3D9FF,stroke:#4A90D9,stroke-width:2px,color:#1A1A1A
+    classDef system fill:#E0E0E0,stroke:#9E9E9E,stroke-width:2px,color:#1A1A1A
+    classDef decision fill:#FFE066,stroke:#E6B800,stroke-width:2px,color:#1A1A1A
+    classDef errorNode fill:#FFB3B3,stroke:#E05C5C,stroke-width:2px,stroke-dasharray: 5 5,color:#1A1A1A
+
+    A(["Start: opens Hosts module"]):::startEnd -->|"navigates to Hosts"| B[["System: load Host table"]]:::system
+    B -->|"load succeeds"| C{"Decision: any Hosts on record?"}:::decision
+    B -->|"load fails"| E1["Error: Host table failed to load"]:::errorNode
+    E1 -.->|"retry"| B
+
+    C -->|"no Hosts yet"| D1["Edge case: no Hosts yet"]:::errorNode
+    D1 -->|"prompts to search GBP"| H(["End: continues in host/gbp-search-import"]):::startEnd
+
+    C -->|"Hosts exist"| F["Screen: Hosts table"]:::screen
+    F -->|"types in search or filter"| G{"Decision: results match?"}:::decision
+    G -->|"matches found"| F
+    G -->|"no matches"| D2["Edge case: search or filter returns no matches"]:::errorNode
+    D2 -.->|"clears search or filter"| F
+
+    F -->|"clicks search for new Host"| H2(["End: continues in host/gbp-search-import"]):::startEnd
+    F -->|"selects a Host row"| I(["End: continues in host/single-host-view"]):::startEnd
+
+    F -->|"clicks export"| J[["System: export Host table"]]:::system
+    J -->|"export succeeds"| K["Screen: export downloaded"]:::screen
+    J -->|"export fails or times out"| E2["Error: export failed or timed out"]:::errorNode
+    E2 -.->|"retry export"| F
+    J -->|"result set is very large"| D3["Edge case: export of very large result set"]:::errorNode
+    D3 -->|"exports in background, notifies when ready"| K
+    K -->|"done"| L(["End: file downloaded"]):::startEnd

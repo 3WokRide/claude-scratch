@@ -1,0 +1,61 @@
+%% Flow: Manage Presets
+%% Applies: 1 (empty preset list), 4 (validation failure), 5 (preset name collision), 6 (delete confirmation), 7 (preset used by an existing Proposal, deleting the default Color scheme)
+%% N/A: 2 (no external API call in preset CRUD), 3 (no AI generation in this flow), 8 (short flow, no session-expiry risk)
+flowchart TD
+    classDef startEnd fill:#B3FFCC,stroke:#4CBB77,stroke-width:2px,color:#1A1A1A
+    classDef screen fill:#B3D9FF,stroke:#4A90D9,stroke-width:2px,color:#1A1A1A
+    classDef system fill:#E0E0E0,stroke:#9E9E9E,stroke-width:2px,color:#1A1A1A
+    classDef decision fill:#FFE066,stroke:#E6B800,stroke-width:2px,color:#1A1A1A
+    classDef errorNode fill:#FFB3B3,stroke:#E05C5C,stroke-width:2px,stroke-dasharray: 5 5,color:#1A1A1A
+
+    A(["Start: opens Customization module"]):::startEnd -->|"opens Customization module"| B["Screen: Customization screen"]:::screen
+    A2(["Start: from proposal/create-proposal-customize"]):::startEnd -->|"no Preset of the needed type existed yet"| B
+    B -->|"selects preset type"| C{"Decision: which preset type?"}:::decision
+    B -->|"exits Customization module"| ENDEXIT(["End: returns to dashboard/dashboard-overview"]):::startEnd
+
+    C -->|"Tone"| LOAD[["System: load presets for selected type"]]:::system
+    C -->|"Template or layout"| LOAD
+    C -->|"Color scheme"| LOAD
+
+    LOAD -->|"presets loaded"| EMPTY{"Decision: any presets of this type exist?"}:::decision
+    EMPTY -->|"No presets exist"| EMPTYSCR["Screen: empty preset list, prompts to add first preset"]:::screen
+    EMPTY -->|"Presets exist"| LIST["Screen: preset list for selected type"]:::screen
+
+    EMPTYSCR -->|"creates first preset"| FORM["Screen: create or edit preset form"]:::screen
+
+    LIST -->|"selects create, edit, or duplicate, Tone: enters name and description"| FORM
+    LIST -->|"selects create, edit, or duplicate, Template: sets layout and previews"| FORM
+    LIST -->|"selects create, edit, or duplicate, Color scheme: sets palette"| FORM
+    LIST -->|"previews a layout, Template only"| PREVIEW["Screen: layout preview"]:::screen
+    PREVIEW -.->|"closes preview"| LIST
+    LIST -->|"sets as default, Color scheme only"| SETDEFAULT[["System: set as default Color scheme"]]:::system
+    SETDEFAULT -->|"default updated"| LIST
+    LIST -->|"selects delete"| DELCONFIRM{"Decision: confirm delete?"}:::decision
+
+    FORM -->|"saves"| VALID{"Decision: form valid?"}:::decision
+    VALID -->|"Name collision"| ERR_NAME["Error: preset name already exists"]:::errorNode
+    ERR_NAME -.->|"edits name, retries"| FORM
+    VALID -->|"Missing or invalid fields"| ERR_FIELD["Error: required fields missing or invalid"]:::errorNode
+    ERR_FIELD -.->|"corrects fields, retries"| FORM
+    VALID -->|"Valid"| SAVE[["System: save preset"]]:::system
+    SAVE -->|"save succeeded"| LIST
+    SAVE -->|"save failed"| ERR_SAVE["Error: save failed"]:::errorNode
+    ERR_SAVE -.->|"retries save"| FORM
+
+    DELCONFIRM -.->|"cancels, returns to list"| LIST
+    DELCONFIRM -->|"confirms"| INUSE{"Decision: preset currently used by a Proposal?"}:::decision
+
+    INUSE -->|"Not in use"| DEFAULTCHECK{"Decision: is this the default Color scheme?"}:::decision
+    DEFAULTCHECK -->|"Is the default Color scheme"| ERR_DEFAULT["Edge case: cannot delete the default Color scheme"]:::errorNode
+    ERR_DEFAULT -->|"must promote another palette first"| PROMOTE["Screen: choose a new default Color scheme"]:::screen
+    PROMOTE -->|"promotes replacement, then deletes original"| DELETE[["System: delete preset"]]:::system
+    DEFAULTCHECK -->|"Not the default, or not a Color scheme preset"| DELETE
+
+    INUSE -->|"In use by a Proposal"| WARN["Edge case: preset is used by an existing Proposal"]:::errorNode
+    WARN -->|"prompts user to decide"| INUSEDECISION{"Decision: block deletion or unlink and keep the Proposal's values?"}:::decision
+    INUSEDECISION -->|"blocks deletion"| BLOCKED["Screen: deletion blocked, preset still referenced"]:::screen
+    BLOCKED -.->|"returns to list"| LIST
+    INUSEDECISION -->|"unlinks and deletes"| UNLINK[["System: unlink preset from Proposals, keep baked-in values"]]:::system
+    UNLINK -->|"unlinked"| DELETE
+
+    DELETE -->|"preset deleted"| LIST

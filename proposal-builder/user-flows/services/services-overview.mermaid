@@ -1,0 +1,36 @@
+%% Flow: Services Overview
+%% Applies: 1 (no Hosts / no Host has Services yet empty states), 2 (overview data load failure), 5 (search/filter no-matches is a distinct empty state)
+%% N/A: 3 (no AI generation in this flow), 4 (no form input, only filter/search fields), 6 (no delete action, that lives in manage-host-services), 7 (nothing deleted or edited here to reference), 8 (short browsing flow, no session-expiry risk)
+flowchart LR
+    classDef startEnd fill:#B3FFCC,stroke:#4CBB77,stroke-width:2px,color:#1A1A1A
+    classDef screen fill:#B3D9FF,stroke:#4A90D9,stroke-width:2px,color:#1A1A1A
+    classDef system fill:#E0E0E0,stroke:#9E9E9E,stroke-width:2px,color:#1A1A1A
+    classDef decision fill:#FFE066,stroke:#E6B800,stroke-width:2px,color:#1A1A1A
+    classDef errorNode fill:#FFB3B3,stroke:#E05C5C,stroke-width:2px,stroke-dasharray: 5 5,color:#1A1A1A
+
+    A(["Start: opens Services module"]):::startEnd -->|"navigates to Services"| B[["System: load Services overview"]]:::system
+    B -->|"load fails"| E1["Error: overview data fails to load"]:::errorNode
+    E1 -.->|"retry"| B
+
+    B -->|"load succeeds"| C{"Decision: any Hosts on record?"}:::decision
+    C -->|"no Hosts yet"| D1["Edge case: no Hosts yet"]:::errorNode
+    D1 -->|"prompts to add a Host"| Z1(["End: continues in host/gbp-search-import"]):::startEnd
+
+    C -->|"Hosts exist"| F{"Decision: any Host has Services yet?"}:::decision
+    F -->|"none have Services yet"| D2["Edge case: Hosts exist but none have Services yet"]:::errorNode
+    D2 -->|"prompts to add Services to a Host"| G["Screen: Services overview table"]:::screen
+
+    F -->|"at least one Host has Services"| G
+
+    G -->|"a Host has zero Services"| D3["Edge case: Host with zero Services shown inline"]:::errorNode
+    D3 -->|"still listed in table"| G
+
+    G -->|"views cross-host Service overview"| H["Screen: cross-host Service overview"]:::screen
+    H -->|"returns to table"| G
+
+    G -->|"types in search or filter"| I{"Decision: results match?"}:::decision
+    I -->|"matches found"| G
+    I -->|"no matches"| D4["Edge case: filter returns no matches"]:::errorNode
+    D4 -.->|"clears search or filter"| G
+
+    G -->|"selects a Host"| Z2(["End: continues in services/manage-host-services"]):::startEnd

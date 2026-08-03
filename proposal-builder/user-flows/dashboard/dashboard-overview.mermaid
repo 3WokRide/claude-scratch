@@ -1,0 +1,34 @@
+%% Flow: Dashboard Overview
+%% Applies: 1 (first-run and no-Proposals empty states), 8 (session expired on load)
+%% N/A: 2 (no external API call on this screen), 3 (no AI generation triggered from this screen), 4 (no data-entry form on this screen), 5 (no duplicate or conflict scenario here), 6 (no delete action on this screen), 7 (no referenced-entity delete or edit happens here)
+flowchart TD
+    classDef startEnd fill:#B3FFCC,stroke:#4CBB77,stroke-width:2px,color:#1A1A1A
+    classDef screen fill:#B3D9FF,stroke:#4A90D9,stroke-width:2px,color:#1A1A1A
+    classDef system fill:#E0E0E0,stroke:#9E9E9E,stroke-width:2px,color:#1A1A1A
+    classDef decision fill:#FFE066,stroke:#E6B800,stroke-width:2px,color:#1A1A1A
+    classDef errorNode fill:#FFB3B3,stroke:#E05C5C,stroke-width:2px,stroke-dasharray: 5 5,color:#1A1A1A
+
+    A(["Start: opens the app"]):::startEnd -->|"opens the app"| L[["System: load dashboard data"]]:::system
+    L -->|"finishes loading"| D1{"Decision: dashboard data load result?"}:::decision
+    D1 -->|"Failed to load"| ERR1["Error: dashboard data failed to load"]:::errorNode
+    ERR1 -.->|"retries loading"| L
+    D1 -->|"Session expired"| EDGE1["Edge case: session expired on load"]:::errorNode
+    EDGE1 -->|"redirects to login"| ENDLOGIN(["End: continues in auth/log-in"]):::startEnd
+    D1 -->|"Loaded successfully"| D2{"Decision: account state?"}:::decision
+
+    D2 -->|"First run, no Hosts and no Proposals"| SCR_EMPTY["Screen: empty dashboard, no Hosts or Proposals yet"]:::screen
+    D2 -->|"Has Hosts but no Proposals"| SCR_NOPROP["Screen: dashboard with Hosts, no Proposals yet"]:::screen
+    D2 -->|"Populated with Hosts and Proposals"| SCR_POP["Screen: populated dashboard"]:::screen
+
+    SCR_EMPTY -->|"adds a Host via GBP lookup"| ENDGBP(["End: continues in host/gbp-search-import"]):::startEnd
+    SCR_EMPTY -->|"starts a Proposal from scratch"| ENDDISC(["End: continues in proposal/create-proposal-discovery"]):::startEnd
+
+    SCR_NOPROP -->|"selects a Host without a Proposal"| ENDHOST(["End: continues in host/single-host-view"]):::startEnd
+    SCR_NOPROP -->|"starts a Proposal directly"| ENDDISC
+
+    SCR_POP -->|"clicks New Proposal quick-start"| ENDDISC
+    SCR_POP -->|"selects a recently edited Proposal"| ENDRESUME(["End: continues in dashboard/resume-draft-proposal"]):::startEnd
+    SCR_POP -->|"selects a most-used Bundle, template, or tone"| ENDPRESET(["End: continues in dashboard/start-proposal-from-preset"]):::startEnd
+    SCR_POP -->|"selects a Host without a Proposal yet"| D4{"Decision: view Host details or start a Proposal directly?"}:::decision
+    D4 -->|"views Host details"| ENDHOST
+    D4 -->|"starts a Proposal directly"| ENDDISC

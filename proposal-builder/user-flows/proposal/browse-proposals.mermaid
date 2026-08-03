@@ -1,0 +1,38 @@
+%% Flow: Browse Proposals
+%% Applies: 1 (no Proposals yet empty state), 5 (search or filter returns no matches, distinct from empty state), 7 (Proposal whose Host was deleted), 8 (session expiry on load)
+%% N/A: 2 (no external API call in this flow), 3 (no AI generation in this flow), 4 (no form input, only filter/search fields), 6 (delete confirmation lives in delete-proposal)
+flowchart LR
+    classDef startEnd fill:#B3FFCC,stroke:#4CBB77,stroke-width:2px,color:#1A1A1A
+    classDef screen fill:#B3D9FF,stroke:#4A90D9,stroke-width:2px,color:#1A1A1A
+    classDef system fill:#E0E0E0,stroke:#9E9E9E,stroke-width:2px,color:#1A1A1A
+    classDef decision fill:#FFE066,stroke:#E6B800,stroke-width:2px,color:#1A1A1A
+    classDef errorNode fill:#FFB3B3,stroke:#E05C5C,stroke-width:2px,stroke-dasharray: 5 5,color:#1A1A1A
+
+    A(["Start: opens Proposals module"]):::startEnd -->|"navigates to Proposals"| B[["System: load Proposal list"]]:::system
+    B -->|"load fails"| E1["Error: Proposal list failed to load"]:::errorNode
+    E1 -.->|"retry"| B
+    B -->|"session expired"| E2["Edge case: session expired"]:::errorNode
+    E2 -->|"redirects to log in"| Z1(["End: continues in auth/log-in"]):::startEnd
+
+    B -->|"load succeeds"| C{"Decision: any Proposals on record?"}:::decision
+    C -->|"no Proposals yet"| D1["Edge case: no Proposals yet"]:::errorNode
+    D1 -->|"prompts to create one"| Z2(["End: continues in proposal/create-proposal-discovery"]):::startEnd
+
+    C -->|"Proposals exist"| F["Screen: Proposals list"]:::screen
+    F -->|"types in search or filter"| G{"Decision: results match?"}:::decision
+    G -->|"matches found"| F
+    G -->|"no matches"| D2["Edge case: search or filter returns no matches"]:::errorNode
+    D2 -.->|"clears search or filter"| F
+
+    F -->|"opens a row"| H{"Decision: Draft or completed Proposal?"}:::decision
+    H -->|"Draft"| Z3(["End: continues in proposal/save-and-resume-draft"]):::startEnd
+    H -->|"completed, opens for revision"| Z4(["End: continues in proposal/revise-proposal"]):::startEnd
+    H -->|"completed, opens for view"| I["Screen: Proposal view"]:::screen
+    I -->|"switches to revise"| Z4
+
+    H -->|"Host was deleted"| E3["Edge case: Proposal whose Host was deleted"]:::errorNode
+    E3 -->|"shows read-only Proposal, no re-export"| I
+
+    F -->|"clones a Proposal"| Z5(["End: continues in proposal/clone-proposal"]):::startEnd
+    F -->|"revises a completed Proposal"| Z4
+    F -->|"deletes a Proposal"| Z6(["End: continues in proposal/delete-proposal"]):::startEnd

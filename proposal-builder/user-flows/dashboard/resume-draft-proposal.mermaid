@@ -1,0 +1,43 @@
+%% Flow: Resume Draft Proposal
+%% Applies: 2 (Draft load treated as backend fetch failure), 5 (concurrent edit conflict), 6 (discard Draft confirmation), 7 (Draft references a deleted Host, Preset, or Service)
+%% N/A: 1 (Draft list lives in dashboard-overview or browse-proposals), 3 (no AI generation call in this flow), 4 (no data-entry form, only replacement selection), 8 (short handoff flow, session expiry covered at dashboard load)
+flowchart LR
+    classDef startEnd fill:#B3FFCC,stroke:#4CBB77,stroke-width:2px,color:#1A1A1A
+    classDef screen fill:#B3D9FF,stroke:#4A90D9,stroke-width:2px,color:#1A1A1A
+    classDef system fill:#E0E0E0,stroke:#9E9E9E,stroke-width:2px,color:#1A1A1A
+    classDef decision fill:#FFE066,stroke:#E6B800,stroke-width:2px,color:#1A1A1A
+    classDef errorNode fill:#FFB3B3,stroke:#E05C5C,stroke-width:2px,stroke-dasharray: 5 5,color:#1A1A1A
+
+    A1(["Start: from dashboard/dashboard-overview"]):::startEnd -->|"selects a recent Draft"| LOAD[["System: load Draft"]]:::system
+    A2(["Start: from proposal/browse-proposals"]):::startEnd -->|"selects a Draft"| LOAD
+
+    LOAD -->|"finishes loading"| D1{"Decision: Draft load result?"}:::decision
+    D1 -->|"Failed to load"| ERR1["Error: Draft failed to load"]:::errorNode
+    ERR1 -.->|"retries loading"| LOAD
+    D1 -->|"Loaded successfully"| D2{"Decision: Draft already open in another session?"}:::decision
+
+    D2 -->|"Open elsewhere"| EDGE1["Edge case: concurrent edit detected"]:::errorNode
+    EDGE1 -->|"warns the user"| D2b{"Decision: take over editing or cancel?"}:::decision
+    D2b -->|"takes over editing"| D3{"Decision: Draft's Host still exists?"}:::decision
+    D2b -->|"cancels"| ENDCANCEL(["End: returns to dashboard/dashboard-overview"]):::startEnd
+    D2 -->|"Not open elsewhere"| D3
+
+    D3 -->|"Host still exists"| D4{"Decision: Draft's Preset or Service still exists?"}:::decision
+    D3 -->|"Host was deleted"| EDGE2["Edge case: Draft's Host was deleted"]:::errorNode
+    EDGE2 -->|"prompts the user"| D3b{"Decision: reassign to a different Host or discard the Draft?"}:::decision
+    D3b -->|"reassigns to a different Host"| SCR_REASSIGN["Screen: select a replacement Host"]:::screen
+    SCR_REASSIGN -->|"selects replacement Host"| D4
+    D3b -->|"discards the Draft"| DCONF{"Decision: confirm discard?"}:::decision
+    DCONF -->|"confirms discard"| ENDDISCARD(["End: Draft discarded, returns to dashboard/dashboard-overview"]):::startEnd
+    DCONF -.->|"cancels, returns to prompt"| D3b
+
+    D4 -->|"Preset or Service still exists"| D5{"Decision: which step was the Draft saved at?"}:::decision
+    D4 -->|"references a missing Preset or Service"| EDGE3["Edge case: Draft references a missing Preset or Service"]:::errorNode
+    EDGE3 -->|"prompts the user"| D4b{"Decision: pick a replacement or continue without it?"}:::decision
+    D4b -->|"picks a replacement"| SCR_REPLACE["Screen: choose a replacement Preset or Service"]:::screen
+    SCR_REPLACE -->|"selects replacement"| D5
+    D4b -->|"continues without it"| D5
+
+    D5 -->|"saved at Discovery step"| ENDDISC(["End: continues in proposal/create-proposal-discovery"]):::startEnd
+    D5 -->|"saved at Customize step"| ENDCUST(["End: continues in proposal/create-proposal-customize"]):::startEnd
+    D5 -->|"saved at Generate or Preview step"| ENDGEN(["End: continues in proposal/create-proposal-generate-preview"]):::startEnd

@@ -1,0 +1,48 @@
+%% Flow: Service Catalog
+%% Applies: 1 (empty catalog), 4 (invalid or missing pricing), 5 (duplicate catalog entry name), 6 (delete confirmation), 7 (entry used in a Host Service list or referenced by a Proposal)
+%% N/A: 2 (no external API call in catalog CRUD), 3 (AI generation happens elsewhere, not in this flow), 8 (short flow, no session-expiry risk)
+flowchart LR
+    classDef startEnd fill:#B3FFCC,stroke:#4CBB77,stroke-width:2px,color:#1A1A1A
+    classDef screen fill:#B3D9FF,stroke:#4A90D9,stroke-width:2px,color:#1A1A1A
+    classDef system fill:#E0E0E0,stroke:#9E9E9E,stroke-width:2px,color:#1A1A1A
+    classDef decision fill:#FFE066,stroke:#E6B800,stroke-width:2px,color:#1A1A1A
+    classDef errorNode fill:#FFB3B3,stroke:#E05C5C,stroke-width:2px,stroke-dasharray: 5 5,color:#1A1A1A
+
+    A(["Start: opens Service catalog"]):::startEnd -->|"opens Service catalog"| LOAD[["System: load Service catalog"]]:::system
+    A2(["Start: from proposal/create-proposal-customize"]):::startEnd -->|"catalog was empty when adding a custom Service"| LOAD
+    A3(["Start: from services/manage-host-services"]):::startEnd -->|"catalog was empty when seeding a Host Service list"| LOAD
+    LOAD -->|"finishes loading"| C{"Decision: any catalog entries exist?"}:::decision
+    C -->|"No entries"| D["Screen: empty catalog, prompts to add the first entry"]:::screen
+    C -->|"Entries exist"| E["Screen: Service catalog list"]:::screen
+
+    D -->|"adds first entry"| H["Screen: add or edit Service form"]:::screen
+
+    E -->|"selects an action"| F{"Decision: add, edit, delete, or search or filter?"}:::decision
+    F -.->|"searches or filters, list updates"| E
+    F -->|"adds an entry"| H
+    F -->|"edits a selected entry"| H
+    F -->|"deletes a selected entry"| I{"Decision: confirm delete?"}:::decision
+
+    I -.->|"cancels, returns to list"| E
+    I -->|"confirms"| J{"Decision: entry used in a Host Service list or referenced by a Proposal?"}:::decision
+    J -->|"Not in use"| K[["System: delete catalog entry"]]:::system
+    J -->|"In use"| L["Edge case: entry is used in N Host Service lists or Proposals"]:::errorNode
+    L -->|"prompts user to decide"| M{"Decision: block deletion or unlink and keep existing references?"}:::decision
+    M -->|"blocks deletion"| N["Screen: deletion blocked, entry still referenced"]:::screen
+    N -.->|"returns to list"| E
+    M -->|"unlinks and deletes"| O[["System: unlink entry from Host Service lists and Proposals, keep existing values"]]:::system
+    O -->|"unlinked"| K
+    K -->|"entry deleted"| E
+
+    H -->|"saves"| P{"Decision: form valid?"}:::decision
+    P -->|"Duplicate entry name"| Q["Error: duplicate catalog entry name"]:::errorNode
+    Q -.->|"edits name, retries"| H
+    P -->|"Invalid or missing pricing"| R["Error: invalid or missing pricing"]:::errorNode
+    R -.->|"corrects pricing, retries"| H
+    P -->|"Valid"| S[["System: save catalog entry"]]:::system
+    S -->|"save succeeded"| E
+    S -->|"save failed"| T["Error: save failed"]:::errorNode
+    T -.->|"retries save"| H
+
+    E -->|"exits catalog, available during proposal customization"| U1(["End: continues in proposal/create-proposal-customize"]):::startEnd
+    E -->|"exits catalog, available during host service management"| U2(["End: continues in services/manage-host-services"]):::startEnd

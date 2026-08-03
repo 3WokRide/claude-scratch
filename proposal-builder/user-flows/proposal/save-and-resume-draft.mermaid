@@ -1,0 +1,50 @@
+%% Flow: Save and Resume Draft
+%% Applies: 5 (same Draft open in two tabs is a concurrent-edit conflict), 6 (deleting a Draft needs confirmation), 7 (Draft references a deleted Host, Preset, or Service), 8 (session expires before the save completes)
+%% N/A: 1 (no empty or first-run list in this cross-cutting flow), 2 (no external API call in this flow), 3 (no AI generation call in this flow itself), 4 (no user-entered form to validate beyond Draft selection)
+flowchart LR
+    classDef startEnd fill:#B3FFCC,stroke:#4CBB77,stroke-width:2px,color:#1A1A1A
+    classDef screen fill:#B3D9FF,stroke:#4A90D9,stroke-width:2px,color:#1A1A1A
+    classDef system fill:#E0E0E0,stroke:#9E9E9E,stroke-width:2px,color:#1A1A1A
+    classDef decision fill:#FFE066,stroke:#E6B800,stroke-width:2px,color:#1A1A1A
+    classDef errorNode fill:#FFB3B3,stroke:#E05C5C,stroke-width:2px,stroke-dasharray: 5 5,color:#1A1A1A
+
+    SA1(["Start: from proposal/create-proposal-discovery, save-as-Draft exit"]):::startEnd -->|"exits the creation step"| B{"Decision: how is the Draft being saved?"}:::decision
+    SA2(["Start: from proposal/create-proposal-customize, save-as-Draft exit"]):::startEnd -->|"exits the creation step"| B
+    SA3(["Start: from proposal/create-proposal-generate-preview, save-as-Draft exit"]):::startEnd -->|"exits the creation step"| B
+
+    B -->|"explicit save"| C[["System: Save Draft"]]:::system
+    B -->|"autosave triggers"| C
+    B -->|"navigates away with unsaved changes"| D["Edge case: navigates away with unsaved changes"]:::errorNode
+    D -->|"prompts to save before leaving"| C
+
+    C -->|"save succeeds"| E["Screen: Draft saved confirmation"]:::screen
+    C -->|"save fails"| ERR_SAVE["Error: save Draft failed, risks losing work"]:::errorNode
+    ERR_SAVE -.->|"retries save"| C
+    C -->|"session expires before save completes"| ERR_SESS["Edge case: session expires before save completes"]:::errorNode
+    ERR_SESS -->|"redirects to log in"| END_AUTH(["End: continues in auth/log-in"]):::startEnd
+
+    E -->|"exits"| END_EXIT(["End: Draft saved, exits creation flow"]):::startEnd
+
+    SB1(["Start: from proposal/browse-proposals, opens a Draft"]):::startEnd -->|"selects a Draft to resume"| H[["System: Load Draft"]]:::system
+    SB2(["Start: from dashboard/resume-draft-proposal, opens a Draft"]):::startEnd -->|"selects a Draft to resume"| H
+
+    H -->|"Draft loads"| I{"Decision: which step was the Draft saved at?"}:::decision
+    I -->|"saved at discovery step"| END_D1(["End: resumes in proposal/create-proposal-discovery"]):::startEnd
+    I -->|"saved at customize step"| END_D2(["End: resumes in proposal/create-proposal-customize"]):::startEnd
+    I -->|"saved at generate and preview step"| END_D3(["End: resumes in proposal/create-proposal-generate-preview"]):::startEnd
+
+    H -->|"Draft's Host was deleted"| ERR_HOST["Edge case: Draft's Host was deleted"]:::errorNode
+    ERR_HOST -->|"prompts to reassign or delete the Draft"| J["Screen: reassign or delete Draft"]:::screen
+    J -.->|"reassigns a Host"| H
+    J -->|"chooses to delete the Draft"| CONFIRM{"Decision: confirm deleting the Draft?"}:::decision
+    CONFIRM -->|"confirms delete"| END_DEL(["End: Draft deleted"]):::startEnd
+    CONFIRM -->|"cancels"| J
+
+    H -->|"Draft references a Preset or Service that no longer exists"| ERR_REF["Edge case: referenced Preset or Service no longer exists"]:::errorNode
+    ERR_REF -->|"replaces the reference or continues without it"| I
+
+    H -->|"same Draft open in two tabs"| ERR_CONFLICT["Edge case: same Draft open in two tabs"]:::errorNode
+    ERR_CONFLICT -->|"warns of concurrent edit conflict, offers to reload latest"| H
+
+    H -->|"Draft is very old and content is stale"| ERR_STALE["Edge case: very old Draft with stale generated content"]:::errorNode
+    ERR_STALE -->|"flags content as stale, offers to regenerate"| I

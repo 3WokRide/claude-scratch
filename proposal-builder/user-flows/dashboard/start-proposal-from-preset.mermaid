@@ -1,0 +1,38 @@
+%% Flow: Start Proposal from Preset
+%% Applies: 7 (preset or its referenced Service was deleted since last used)
+%% N/A: 1 (preset list lives on the dashboard, not this flow), 2 (GBP search failure handled in host/gbp-search-import), 3 (no AI generation call in this flow), 4 (no data-entry form, only selection steps), 5 (no duplicate or conflict scenario), 6 (no delete action in this flow), 8 (short flow, no session-expiry risk)
+flowchart LR
+    classDef startEnd fill:#B3FFCC,stroke:#4CBB77,stroke-width:2px,color:#1A1A1A
+    classDef screen fill:#B3D9FF,stroke:#4A90D9,stroke-width:2px,color:#1A1A1A
+    classDef system fill:#E0E0E0,stroke:#9E9E9E,stroke-width:2px,color:#1A1A1A
+    classDef decision fill:#FFE066,stroke:#E6B800,stroke-width:2px,color:#1A1A1A
+    classDef errorNode fill:#FFB3B3,stroke:#E05C5C,stroke-width:2px,stroke-dasharray: 5 5,color:#1A1A1A
+
+    A(["Start: from dashboard/dashboard-overview"]):::startEnd -->|"selects a most-used preset"| B["Screen: select a most-used Bundle, template, or tone"]:::screen
+    B -->|"loads the preset"| LOAD[["System: load preset"]]:::system
+    LOAD -->|"finishes loading"| D1{"Decision: preset still exists?"}:::decision
+
+    D1 -->|"Deleted since last used"| EDGE1["Edge case: preset was deleted since last used"]:::errorNode
+    EDGE1 -->|"prompts the user"| D1b{"Decision: pick a different preset or start without one?"}:::decision
+    D1b -.->|"picks a different preset"| B
+    D1b -->|"starts without a preset"| D4{"Decision: is a Host already chosen?"}:::decision
+    D1 -->|"Still exists"| D2{"Decision: preset was edited since last used?"}:::decision
+
+    D2 -->|"Edited since last used"| EDGE2["Edge case: preset was edited since last used"]:::errorNode
+    EDGE2 -->|"uses the latest version"| D3{"Decision: preset references a Service still in the catalog?"}:::decision
+    D2 -->|"Unchanged"| D3
+
+    D3 -->|"Service still in catalog"| D4
+    D3 -->|"Missing from catalog"| EDGE3["Edge case: preset references a Service no longer in the catalog"]:::errorNode
+    EDGE3 -->|"prompts the user"| D3b{"Decision: drop the missing Service or pick a replacement?"}:::decision
+    D3b -->|"drops the missing Service"| D4
+    D3b -->|"picks a replacement"| SCR_REPLACE["Screen: pick a replacement Service from the catalog"]:::screen
+    SCR_REPLACE -->|"selects a replacement Service"| D4
+
+    D4 -->|"Host already chosen"| CREATE[["System: create Proposal pre-seeded with preset"]]:::system
+    D4 -->|"No Host chosen yet"| SCR_HOST["Screen: pick or search for a Host"]:::screen
+    SCR_HOST -->|"selects or finds a Host"| CREATE
+
+    CREATE -->|"Proposal created"| D5{"Decision: does the preset include a Bundle selection?"}:::decision
+    D5 -->|"Includes a Bundle selection"| ENDDISC(["End: continues in proposal/create-proposal-discovery"]):::startEnd
+    D5 -->|"Template or tone only"| ENDCUST(["End: continues in proposal/create-proposal-customize"]):::startEnd

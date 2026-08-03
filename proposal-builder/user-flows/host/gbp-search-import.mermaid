@@ -1,0 +1,37 @@
+%% Flow: GBP Search and Import
+%% Applies: 2 (GBP API failure, rate-limiting), 3 (partial/incomplete data from GBP treated like a partial-result edge case), 5 (duplicate detection on import)
+%% N/A: 1 (search screen has no prior list to be empty), 4 (manual-add form validation belongs to its own flow, not detailed here), 6 (no destructive action in this flow), 7 (nothing to reference here, import only), 8 (short flow, no session-expiry risk)
+flowchart LR
+    classDef startEnd fill:#B3FFCC,stroke:#4CBB77,stroke-width:2px,color:#1A1A1A
+    classDef screen fill:#B3D9FF,stroke:#4A90D9,stroke-width:2px,color:#1A1A1A
+    classDef system fill:#E0E0E0,stroke:#9E9E9E,stroke-width:2px,color:#1A1A1A
+    classDef decision fill:#FFE066,stroke:#E6B800,stroke-width:2px,color:#1A1A1A
+    classDef errorNode fill:#FFB3B3,stroke:#E05C5C,stroke-width:2px,stroke-dasharray: 5 5,color:#1A1A1A
+
+    A(["Start: from host/browse-hosts"]):::startEnd -->|"clicks search for new Host"| B["Screen: search Google Business Profile"]:::screen
+    B -->|"submits business name or address"| C[["System: GBP lookup"]]:::system
+    C -->|"matches found"| D["Screen: GBP results list"]:::screen
+    C -->|"no results for the query"| E1["Edge case: no results for the query"]:::errorNode
+    C -->|"GBP unavailable or rate-limited"| E2["Error: GBP API error"]:::errorNode
+    E2 -.->|"retry"| C
+
+    E1 -->|"refines the search"| B
+    E1 -->|"adds the Host manually"| F["Screen: manual Host entry form"]:::screen
+    F -->|"saves manual entry"| G[["System: save Host record"]]:::system
+    G -->|"save succeeds"| H(["End: continues in host/single-host-view"]):::startEnd
+    G -->|"save fails"| E3["Error: import save failure"]:::errorNode
+    E3 -.->|"retry save"| F
+
+    D -->|"selects a business"| I[["System: Duplicate detection"]]:::system
+    D -->|"listing data incomplete"| E4["Edge case: incomplete GBP listing data"]:::errorNode
+    E4 -->|"proceeds with available fields"| I
+
+    I -->|"no duplicate found"| J[["System: import Host record"]]:::system
+    I -->|"duplicate found"| K{"Decision: how to resolve the duplicate?"}:::decision
+    K -->|"open the existing Host"| L(["End: continues in host/single-host-view"]):::startEnd
+    K -->|"merge or update the existing Host"| M[["System: merge and update Host record"]]:::system
+    M -->|"merge complete"| L
+
+    J -->|"import succeeds"| N(["End: continues in host/single-host-view"]):::startEnd
+    J -->|"import save fails"| E5["Error: import save failure"]:::errorNode
+    E5 -.->|"retry import"| D

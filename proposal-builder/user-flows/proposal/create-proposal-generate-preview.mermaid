@@ -1,0 +1,44 @@
+%% Flow: Create Proposal - Generate and Preview
+%% Applies: 2 (Slides export API failure or quota), 3 (per-section AI generation failure, timeout, or partial result), 6 (unsaved manual edits when leaving the preview), 8 (session expiry during a long generation)
+%% N/A: 1 (no empty or first-run list state in this flow), 4 (no submitted form here, edits are inline on the preview), 5 (no duplicate or naming conflict in this flow), 7 (nothing referenced elsewhere breaks in this step)
+flowchart TD
+    classDef startEnd fill:#B3FFCC,stroke:#4CBB77,stroke-width:2px,color:#1A1A1A
+    classDef screen fill:#B3D9FF,stroke:#4A90D9,stroke-width:2px,color:#1A1A1A
+    classDef system fill:#E0E0E0,stroke:#9E9E9E,stroke-width:2px,color:#1A1A1A
+    classDef decision fill:#FFE066,stroke:#E6B800,stroke-width:2px,color:#1A1A1A
+    classDef errorNode fill:#FFB3B3,stroke:#E05C5C,stroke-width:2px,stroke-dasharray: 5 5,color:#1A1A1A
+
+    S1(["Start: from proposal/create-proposal-customize"]):::startEnd -->|"continues to preview"| G1[["System: AI generates proposal Sections, one Section at a time"]]:::system
+    S2(["Start: from proposal/regenerate-proposal-section, Section regenerated"]):::startEnd -->|"returns with regenerated Section"| PREV["Screen: editable, full-screenable proposal preview"]:::screen
+
+    G1 -->|"generation attempt completes"| D1{"Decision: generation result?"}:::decision
+    D1 -->|"all Sections succeeded"| PREV
+    D1 -->|"some Sections failed"| PARTIAL["Edge case: some Sections failed to generate"]:::errorNode
+    PARTIAL -->|"shows generated Sections, offers per-Section retry"| PREV
+    D1 -->|"generation failed entirely"| ERR_GEN["Error: proposal generation failed"]:::errorNode
+    ERR_GEN -.->|"retries generation"| G1
+    D1 -->|"generation timed out"| ERR_TO["Error: proposal generation timed out"]:::errorNode
+    ERR_TO -.->|"retries generation"| G1
+    D1 -->|"AI quota or rate limit reached"| ERR_QUOTA["Error: AI quota or rate limit reached"]:::errorNode
+    ERR_QUOTA -.->|"retries later"| G1
+
+    G1 -->|"session expires during generation"| ERR_SESS["Edge case: session expires during generation"]:::errorNode
+    ERR_SESS -->|"redirects to log in"| END_AUTH(["End: continues in auth/log-in"]):::startEnd
+    G1 -->|"user navigates away while generation runs"| ERR_NAV["Edge case: generation still running when user navigates away"]:::errorNode
+    ERR_NAV -->|"generation continues in background, notifies when ready"| PREV
+
+    PREV -->|"edits a Section inline"| EDIT_SAVE[["System: save inline edit"]]:::system
+    EDIT_SAVE -->|"edit saved"| PREV
+    PREV -->|"regenerates an individual Section"| END_REGEN(["End: continues in proposal/regenerate-proposal-section"]):::startEnd
+    PREV -->|"tries to leave with unsaved manual edits"| ERR_UNSAVED["Edge case: unsaved manual edits when leaving preview"]:::errorNode
+    ERR_UNSAVED -->|"prompts to save or discard"| PREV
+
+    PREV -->|"clicks export"| EXPORT[["System: Export to Google Slides"]]:::system
+    EXPORT -->|"export attempt completes"| D2{"Decision: export result?"}:::decision
+    D2 -->|"export succeeded, Slides link produced"| SAVED[["System: save Proposal on Host"]]:::system
+    D2 -->|"export failed"| ERR_EXP["Error: Slides export failed"]:::errorNode
+    ERR_EXP -.->|"retries export"| EXPORT
+    D2 -->|"quota exceeded"| ERR_QUOTA2["Error: Slides export quota exceeded"]:::errorNode
+    ERR_QUOTA2 -.->|"retries later"| EXPORT
+
+    SAVED -->|"save complete"| END_DONE(["End: Proposal saved on Host, Slides link ready"]):::startEnd
