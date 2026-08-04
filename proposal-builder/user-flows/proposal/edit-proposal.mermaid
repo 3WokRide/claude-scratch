@@ -1,0 +1,17 @@
+%% Flow: Edit Proposal
+%% Applies: none beyond the routing decision itself
+%% N/A: 1 (no list/table state), 2 (no external API call in this flow), 3 (no AI generation call in this flow, regeneration happens by re-entering the creation flow), 4 (no form here), 5 (no duplicate or naming conflict), 6 (no destructive action), 7 (nothing referenced elsewhere breaks in this step), 8 (short routing decision, no session-expiry risk called out)
+flowchart TD
+    classDef startEnd fill:#B3FFCC,stroke:#4CBB77,stroke-width:2px,color:#1A1A1A
+    classDef screen fill:#B3D9FF,stroke:#4A90D9,stroke-width:2px,color:#1A1A1A
+    classDef system fill:#E0E0E0,stroke:#9E9E9E,stroke-width:2px,color:#1A1A1A
+    classDef decision fill:#FFE066,stroke:#E6B800,stroke-width:2px,color:#1A1A1A
+    classDef errorNode fill:#FFB3B3,stroke:#E05C5C,stroke-width:2px,stroke-dasharray: 5 5,color:#1A1A1A
+
+    S1(["Start: from proposal/create-proposal-generate-preview"]):::startEnd -->|"wants to edit the Proposal"| A{"Decision: what do you want to edit?"}:::decision
+    S2(["Start: from proposal/revise-proposal"]):::startEnd -->|"wants to edit the Proposal"| A
+
+    A -->|"Problem-Solution Bundles"| Z1(["End: continues in proposal/create-proposal-discovery, Bundle selection step"]):::startEnd
+    A -->|"Services"| Z2(["End: continues in proposal/create-proposal-customize, Services step"]):::startEnd
+    A -->|"anything else"| B[["System: open the Proposal Slides deck in an editable state"]]:::system
+    B -->|"opens"| Z3(["End: continues editing directly in Google Slides"]):::startEnd

@@ -8,7 +8,7 @@ flowchart LR
     classDef decision fill:#FFE066,stroke:#E6B800,stroke-width:2px,color:#1A1A1A
     classDef errorNode fill:#FFB3B3,stroke:#E05C5C,stroke-width:2px,stroke-dasharray: 5 5,color:#1A1A1A
 
-    A(["Start: from dashboard/dashboard-overview"]):::startEnd -->|"selects a most-used preset"| B["Screen: select a most-used Bundle, template, or tone"]:::screen
+    A(["Start: from dashboard/dashboard-overview"]):::startEnd -->|"selects a most-used preset"| B["Screen: select a most-used Bundle or tone"]:::screen
     B -->|"loads the preset"| LOAD[["System: load preset"]]:::system
     LOAD -->|"finishes loading"| D1{"Decision: preset still exists?"}:::decision
 
@@ -35,4 +35,4 @@ flowchart LR
 
     CREATE -->|"Proposal created"| D5{"Decision: does the preset include a Bundle selection?"}:::decision
     D5 -->|"Includes a Bundle selection"| ENDDISC(["End: continues in proposal/create-proposal-discovery"]):::startEnd
-    D5 -->|"Template or tone only"| ENDCUST(["End: continues in proposal/create-proposal-customize"]):::startEnd
+    D5 -->|"Tone only"| ENDCUST(["End: continues in proposal/create-proposal-customize"]):::startEnd

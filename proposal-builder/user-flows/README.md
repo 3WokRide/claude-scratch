@@ -6,7 +6,7 @@ Mermaid flowcharts mapping every user task in Proposal Builder — screens, deci
 
 **Import**: paste the Mermaid code into a Mermaid-to-FigJam plugin (search "mermaid" in FigJam's plugin browser) for editable native shapes, or paste into Mermaid Live Editor for a static image.
 
-This file is the contract all 22 flow files follow. Read it before writing or editing any `.mermaid` file in this folder — it's what keeps 22 independently-authored diagrams looking like one product map instead of 22 unrelated pictures.
+This file is the contract all 21 flow files follow. Read it before writing or editing any `.mermaid` file in this folder — it's what keeps 21 independently-authored diagrams looking like one product map instead of 21 unrelated pictures.
 
 ## Folder map
 
@@ -43,17 +43,16 @@ Authenticated via Auth0 Universal Login: the app redirects to Auth0-hosted scree
 | `gbp-search-import.mermaid` | GBP lookup → results → import, or manual entry (first-class, no GBP required) |
 | `single-host-view.mermaid` | detail → notes save → branch to proposals / service management / new proposal; no Proposal or Service is auto-created |
 
-### proposal/ (9)
+### proposal/ (8)
 | File | Covers |
 |---|---|
 | `browse-proposals.mermaid` | list → filter/search → open |
-| `create-proposal-discovery.mermaid` | steps 1–3: GBP search (skippable) → Strengths/Opportunities → bundle selection |
-| `create-proposal-customize.mermaid` | steps 4–5: tone/pricing/template/color scheme/notes, custom services, optional case study |
-| `create-proposal-generate-preview.mermaid` | steps 6–8: per-section AI generation → editable preview → Slides export → save on host |
-| `regenerate-proposal-section.mermaid` | pick one section → regenerate → accept or revert |
+| `create-proposal-discovery.mermaid` | steps 1–3: GBP search (skippable) → Strengths/Opportunities (AI failure blocks proceeding, no manual fallback) → bundle selection |
+| `create-proposal-customize.mermaid` | steps 4–5: tone/pricing/predefined template/color scheme/notes, custom services, optional case study |
+| `create-proposal-generate-preview.mermaid` | steps 6–8: single all-or-nothing AI generation call → preview is already the Google Slides deck → save on host |
+| `edit-proposal.mermaid` | shared decision: Bundles/Services → back to the relevant creation step, anything else → open the Slides deck editable |
 | `save-and-resume-draft.mermaid` | cross-cutting: save/autosave at any step, exit, resume |
-| `clone-proposal.mermaid` | duplicate as starting point → choose target host → lands in creation flow |
-| `revise-proposal.mermaid` | reopen a completed proposal → edit/regenerate → re-export |
+| `revise-proposal.mermaid` | reopen a proposal to edit → edit-proposal handoff → re-export creates a new Slides copy, original untouched |
 | `delete-proposal.mermaid` | confirm → delete |
 
 ### services/ (2)
@@ -65,7 +64,7 @@ Authenticated via Auth0 Universal Login: the app redirects to Auth0-hosted scree
 ### customization/ (2)
 | File | Covers |
 |---|---|
-| `manage-presets.mermaid` | CRUD for tone / template / color-scheme presets, type-specific branches |
+| `manage-presets.mermaid` | CRUD for tone / color-scheme presets, type-specific branches (templates are predefined, not user-managed presets) |
 | `service-catalog.mermaid` | catalog CRUD → feeds custom-service step and AI bundle suggestions |
 
 ## Diagram conventions
@@ -152,11 +151,11 @@ Every named target must exist as a real file in this folder. A flow with more th
 | `host/gbp-search-import` | `host/single-host-view` (import complete, land on new host) |
 | `proposal/create-proposal-discovery` | `proposal/create-proposal-customize` (Continue to customize) |
 | `proposal/create-proposal-customize` | `proposal/create-proposal-generate-preview` (Continue to preview) |
-| `proposal/create-proposal-generate-preview` | `proposal/regenerate-proposal-section` (regenerate one section, then returns) |
-| `proposal/browse-proposals` | `proposal/revise-proposal` (open a completed proposal) |
+| `proposal/create-proposal-generate-preview` | `proposal/edit-proposal` (wants to edit the preview) |
+| `proposal/edit-proposal` | `proposal/create-proposal-discovery` (edit Bundles) or `proposal/create-proposal-customize` (edit Services), otherwise opens the Slides deck directly |
+| `proposal/browse-proposals` | `proposal/revise-proposal` (open a proposal to edit) |
 | `proposal/browse-proposals` | `dashboard/resume-draft-proposal` or `proposal/save-and-resume-draft` (open a draft) |
-| `proposal/clone-proposal` | `proposal/create-proposal-customize` (duplicate lands in creation flow, bundles/pricing pre-filled) |
-| `proposal/revise-proposal` | `proposal/create-proposal-customize` and/or `proposal/create-proposal-generate-preview` (edit / re-export) |
+| `proposal/revise-proposal` | `proposal/edit-proposal` (edit, then re-export as a new Slides copy) |
 | `proposal/save-and-resume-draft` | any `create-proposal-*` file (cross-cutting; resumes at the saved step) |
 | `services/services-overview` | `services/manage-host-services` (select a host) |
 

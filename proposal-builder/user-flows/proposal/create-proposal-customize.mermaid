@@ -1,5 +1,5 @@
 %% Flow: Create Proposal - Customize
-%% Applies: 1 (Service catalog is empty when adding a custom Service), 4 (pricing, notes, and case study field validation), 7 (a selected Preset was deleted since selection), 8 (session expiry mid-step)
+%% Applies: 1 (Service catalog is empty when adding a custom Service, predefined Template list is empty), 4 (pricing, notes, and case study field validation), 7 (a selected tone or color scheme Preset was deleted since selection), 8 (session expiry mid-step)
 %% N/A: 2 (no external API call in this flow), 3 (no AI generation call in this flow), 5 (no duplicate or naming conflict surfaced here), 6 (no destructive action requiring confirmation in this flow)
 flowchart TD
     classDef startEnd fill:#B3FFCC,stroke:#4CBB77,stroke-width:2px,color:#1A1A1A
@@ -9,8 +9,7 @@ flowchart TD
     classDef errorNode fill:#FFB3B3,stroke:#E05C5C,stroke-width:2px,stroke-dasharray: 5 5,color:#1A1A1A
 
     S1(["Start: from proposal/create-proposal-discovery"]):::startEnd -->|"lands on customize screen"| B["Screen: customize proposal"]:::screen
-    S2(["Start: from proposal/clone-proposal, fields pre-filled"]):::startEnd -->|"lands on customize screen"| B
-    S3(["Start: from proposal/revise-proposal"]):::startEnd -->|"lands on customize screen to edit"| B
+    S3(["Start: from proposal/edit-proposal, Services step"]):::startEnd -->|"lands on customize screen to edit"| B
 
     B -->|"sets tone"| T1{"Decision: use a tone Preset?"}:::decision
     T1 -->|"selects a Preset"| B
@@ -20,13 +19,11 @@ flowchart TD
     ERR_T -->|"falls back to manual entry"| T3
     ERR_T -->|"leaves to create a tone Preset first"| END_PRESETS(["End: continues in customization/manage-presets"]):::startEnd
 
-    B -->|"sets template"| L1{"Decision: use a template Preset?"}:::decision
-    L1 -->|"selects a Preset"| B
-    L1 -->|"chooses layout manually"| L3["Screen: manual template selection"]:::screen
-    L3 -->|"template saved"| B
-    L1 -->|"no template Presets exist yet"| ERR_L["Edge case: no template Preset exists yet"]:::errorNode
-    ERR_L -->|"falls back to manual selection"| L3
-    ERR_L -->|"leaves to create a template Preset first"| END_PRESETS
+    B -->|"sets template"| L1[["System: load predefined Templates"]]:::system
+    L1 -->|"Templates loaded"| L2["Screen: select a predefined Template"]:::screen
+    L2 -->|"selects a Template"| B
+    L1 -->|"predefined Template list is empty"| ERR_L["Edge case: no predefined Templates available"]:::errorNode
+    ERR_L -.->|"retries load"| L1
 
     B -->|"sets color scheme"| C1{"Decision: use a color scheme Preset?"}:::decision
     C1 -->|"selects a Preset"| B
@@ -63,9 +60,9 @@ flowchart TD
     ERR_SESS -->|"redirects to log in"| END_AUTH(["End: continues in auth/log-in"]):::startEnd
     B -->|"saves as Draft"| END_DRAFT(["End: continues in proposal/save-and-resume-draft"]):::startEnd
 
-    B -->|"clicks continue"| V1{"Decision: any selected Preset deleted since selection?"}:::decision
+    B -->|"clicks continue"| V1{"Decision: any selected tone or color scheme Preset deleted since selection?"}:::decision
     V1 -->|"all selections still valid"| CS1{"Decision: include a case study?"}:::decision
-    V1 -->|"a Preset was deleted since selection"| ERR_PD["Edge case: selected Preset was deleted since selection"]:::errorNode
+    V1 -->|"a Preset was deleted since selection"| ERR_PD["Edge case: selected tone or color scheme Preset was deleted since selection"]:::errorNode
     ERR_PD -->|"replaces with another Preset or continues manually"| B
 
     CS1 -->|"includes a case study"| CS2["Screen: case study information"]:::screen

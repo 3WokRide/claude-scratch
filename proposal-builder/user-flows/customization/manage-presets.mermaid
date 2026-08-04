@@ -14,7 +14,6 @@ flowchart TD
     B -->|"exits Customization module"| ENDEXIT(["End: returns to dashboard/dashboard-overview"]):::startEnd
 
     C -->|"Tone"| LOAD[["System: load presets for selected type"]]:::system
-    C -->|"Template or layout"| LOAD
     C -->|"Color scheme"| LOAD
 
     LOAD -->|"presets loaded"| EMPTY{"Decision: any presets of this type exist?"}:::decision
@@ -24,10 +23,7 @@ flowchart TD
     EMPTYSCR -->|"creates first preset"| FORM["Screen: create or edit preset form"]:::screen
 
     LIST -->|"selects create, edit, or duplicate, Tone: enters name and description"| FORM
-    LIST -->|"selects create, edit, or duplicate, Template: sets layout and previews"| FORM
     LIST -->|"selects create, edit, or duplicate, Color scheme: sets palette"| FORM
-    LIST -->|"previews a layout, Template only"| PREVIEW["Screen: layout preview"]:::screen
-    PREVIEW -.->|"closes preview"| LIST
     LIST -->|"sets as default, Color scheme only"| SETDEFAULT[["System: set as default Color scheme"]]:::system
     SETDEFAULT -->|"default updated"| LIST
     LIST -->|"selects delete"| DELCONFIRM{"Decision: confirm delete?"}:::decision

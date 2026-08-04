@@ -1,5 +1,5 @@
 %% Flow: Create Proposal - Discovery
-%% Applies: 1 (GBP lookup returns an empty result set), 2 (GBP API unavailable or rate-limited), 3 (AI Strengths and Opportunities generation fails, times out, or needs manual fallback), 4 (zero Bundles selected is a required-selection validation), 8 (session expiry mid-step)
+%% Applies: 1 (GBP lookup returns an empty result set), 2 (GBP API unavailable or rate-limited), 3 (AI Strengths and Opportunities generation fails or times out, blocks proceeding, no manual fallback), 4 (zero Bundles selected is a required-selection validation), 8 (session expiry mid-step)
 %% N/A: 5 (duplicate detection on GBP import is handled in host/gbp-search-import, not repeated here), 6 (no destructive action in this flow), 7 (nothing is deleted or edited here that other records depend on)
 flowchart LR
     classDef startEnd fill:#B3FFCC,stroke:#4CBB77,stroke-width:2px,color:#1A1A1A
@@ -24,10 +24,8 @@ flowchart LR
     E -->|"picks the business"| F
 
     F -->|"generation succeeds"| G["Screen: Strengths and Opportunities overview"]:::screen
-    F -->|"generation fails or times out"| ERR3["Error: AI analysis generation fails or times out"]:::errorNode
+    F -->|"generation fails or times out"| ERR3["Error: AI analysis generation fails or times out, blocks proceeding"]:::errorNode
     ERR3 -.->|"retries generation"| F
-    ERR3 -->|"proceeds with manual entry"| G2["Screen: manual Strengths and Opportunities entry"]:::screen
-    G2 -->|"saves manual entries"| G
 
     G -->|"clicks proceed"| H["Screen: Problem-Solution Bundles selection"]:::screen
     G -->|"session expires"| ERR4["Edge case: session expires mid-step"]:::errorNode

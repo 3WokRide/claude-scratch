@@ -35,19 +35,19 @@ The app has 5 modules (tabs): **Dashboard**, **Hosts**, **Proposals**, **Service
 - Proposals can be saved as drafts and resumed at any step of the creation flow
 - **Creation flow**:
   1. Search a business via GBP (skipped if entered from the Hosts module, since the host is already known)
-  2. Show an overview including Strengths and Opportunities (areas the business could work on)
+  2. Show an overview including Strengths and Opportunities (areas the business could work on) — AI-generated only, there is no manual Strengths/Opportunities entry; if generation errors, the flow stops there until it succeeds
   3. On Proceed, show Problem-Solution bundles — selectable pairs used as input for the AI-generated analysis
-  4. On Continue to customize: choose/input tone, pricing per selected bundle (amount + type, e.g. one-time vs. per-month), template (layout), color scheme, and additional notes
-     - Tone, template, and color scheme can come from saved presets (Customization module) or be set manually per-proposal
+  4. On Continue to customize: choose/input tone, pricing per selected bundle (amount + type, e.g. one-time vs. per-month), template, color scheme, and additional notes
+     - Tone and color scheme can come from saved presets (Customization module) or be set manually per-proposal
+     - Template is chosen from a fixed, predefined list retrieved from another database — no user-created templates, no manual fallback
      - Custom services can be added/removed on this same page
   5. Next: optional case study information
-  6. Continue to preview: AI generates the proposal from company info, selected bundles, pricing, etc.
-  7. Editable, full-screenable preview of the generated proposal
-     - Individual sections (e.g., Strengths/Opportunities, pricing) can be regenerated independently, without rerunning the full generation
-     - Output is a Google Slides link
+  6. Continue to preview: AI generates the whole proposal in one go from company info, selected bundles, pricing, etc. — a single call that either succeeds or fails across every section, no partial results and no per-section regeneration
+  7. Preview is already the generated Google Slides deck
+     - To edit the Problem-Solution bundles or the services, the user goes back to that step on the stepper
+     - To edit anything else, the user opens the proposal in an editable state (the Slides deck itself)
   8. Done: proposal is saved on the host
-- Duplicate/clone an existing proposal as a starting point for a new one
-- Revise/reopen an existing (completed) proposal to edit or regenerate it
+- Revise/reopen an existing proposal to edit it — editing bundles/services routes back through the stepper (which re-runs the full generation), editing anything else happens directly on the presentation; re-exporting always creates a new presentation copy, the original is left untouched
 - Delete a proposal
 
 ### Services
@@ -60,12 +60,12 @@ The app has 5 modules (tabs): **Dashboard**, **Hosts**, **Proposals**, **Service
 Settings/library area for reusable elements, so proposals don't need to be rebuilt from scratch each time:
 - **Color scheme presets** — save, name, edit palettes; mark one default
 - **Tone presets** — named tone profiles (e.g., "Formal," "Friendly/Casual," "Technical")
-- **Template/layout presets** — preferred layout combinations
 - **Service catalog** — reusable list of standard services with descriptions and default pricing, used as input during the "add custom service" step of proposal creation
+- Templates are not managed here — they're a fixed, predefined list retrieved from another database (see Proposals, step 4)
 
 ## Key relationships to keep in mind
 
 - **Host ↔ Proposal ↔ Services** are the three central entities. A host can exist without a proposal or without services; proposals and service lists both hang off a host.
-- **Customization presets feed Proposal creation** but never gate it — tone/template/color scheme are always also settable manually per-proposal.
+- **Customization presets feed Proposal creation** but never gate it — tone/color scheme are always also settable manually per-proposal. Template is the exception: it's picked from a fixed predefined list, with no preset and no manual fallback.
 - **GBP is the source of truth for host discovery/import**, both when adding a host directly and when starting a proposal from scratch (vs. starting from an existing host).
-- **AI generation is section-scoped**: proposal sections can be regenerated independently, so the generation step should be designed around per-section calls, not a single monolithic generation.
+- **AI generation is a single monolithic call**: the whole proposal generates in one go and either succeeds or fails across every section — there is no per-section generation or regeneration.

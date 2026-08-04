@@ -1,6 +1,6 @@
 %% Flow: Browse Proposals
-%% Applies: 1 (no Proposals yet empty state), 5 (search or filter returns no matches, distinct from empty state), 7 (Proposal whose Host was deleted), 8 (session expiry on load)
-%% N/A: 2 (no external API call in this flow), 3 (no AI generation in this flow), 4 (no form input, only filter/search fields), 6 (delete confirmation lives in delete-proposal)
+%% Applies: 1 (no Proposals yet empty state), 5 (search or filter returns no matches, distinct from empty state), 8 (session expiry on load)
+%% N/A: 2 (no external API call in this flow), 3 (no AI generation in this flow), 4 (no form input, only filter/search fields), 6 (delete confirmation lives in delete-proposal), 7 (Hosts are archived not deleted, so a Proposal can never lose its Host)
 flowchart LR
     classDef startEnd fill:#B3FFCC,stroke:#4CBB77,stroke-width:2px,color:#1A1A1A
     classDef screen fill:#B3D9FF,stroke:#4A90D9,stroke-width:2px,color:#1A1A1A
@@ -26,13 +26,6 @@ flowchart LR
 
     F -->|"opens a row"| H{"Decision: Draft or completed Proposal?"}:::decision
     H -->|"Draft"| Z3(["End: continues in proposal/save-and-resume-draft"]):::startEnd
-    H -->|"completed, opens for revision"| Z4(["End: continues in proposal/revise-proposal"]):::startEnd
-    H -->|"completed, opens for view"| I["Screen: Proposal view"]:::screen
-    I -->|"switches to revise"| Z4
+    H -->|"completed, opens to edit"| Z4(["End: continues in proposal/revise-proposal"]):::startEnd
 
-    H -->|"Host was deleted"| E3["Edge case: Proposal whose Host was deleted"]:::errorNode
-    E3 -->|"shows read-only Proposal, no re-export"| I
-
-    F -->|"clones a Proposal"| Z5(["End: continues in proposal/clone-proposal"]):::startEnd
-    F -->|"revises a completed Proposal"| Z4
     F -->|"deletes a Proposal"| Z6(["End: continues in proposal/delete-proposal"]):::startEnd
